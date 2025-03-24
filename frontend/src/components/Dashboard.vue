@@ -82,8 +82,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="container mx-auto p-4">
-    <h1 class="text-3xl font-bold mb-6">AI OPS Dashboard</h1>
+  <div class="h-full w-full">
+    <h1 class="text-2xl font-medium text-white mb-6">AI OPS Dashboard</h1>
     
     <!-- System Status Overview -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">

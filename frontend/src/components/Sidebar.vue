@@ -67,16 +67,16 @@ const toggleSidebar = () => {
 </script>
 
 <template>
-  <div class="h-screen flex flex-col bg-white dark:bg-gray-800 shadow-md"
-       :class="{ 'w-20': isCollapsed, 'w-64': !isCollapsed }">
+  <div class="h-screen flex flex-col bg-[#181818] border-r border-gray-800"
+       :class="{ 'w-16': isCollapsed, 'w-56': !isCollapsed }">
     <!-- Logo and Toggle Button -->
-    <div class="flex items-center justify-between h-16 px-4 border-b border-gray-200 dark:border-gray-700">
+    <div class="flex items-center justify-between h-16 px-4 border-b border-gray-800">
       <div class="flex items-center">
-        <span v-if="!isCollapsed" class="text-xl font-bold text-gray-900 dark:text-white">AI OPS</span>
-        <span v-else class="text-xl font-bold text-gray-900 dark:text-white">AI</span>
+        <span v-if="!isCollapsed" class="text-lg font-medium text-white">AI OPS</span>
+        <span v-else class="text-lg font-medium text-white">AI</span>
       </div>
-      <button @click="toggleSidebar" class="p-1 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <button @click="toggleSidebar" class="p-1 rounded-md hover:bg-gray-800 text-gray-400">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path v-if="isCollapsed" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 5l7 7-7 7M5 5l7 7-7 7" />
           <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
         </svg>
@@ -85,21 +85,21 @@ const toggleSidebar = () => {
     
     <!-- Menu Items -->
     <nav class="flex-1 overflow-y-auto py-4">
-      <ul class="space-y-2 px-2">
+      <ul class="space-y-1 px-2">
         <li v-for="item in menuItems" :key="item.id">
           <a :href="item.path"
              @click.prevent="setActiveItem(item.id)"
-             class="flex items-center p-2 text-base font-normal rounded-lg transition-colors"
+             class="flex items-center p-2 text-sm font-medium rounded-md transition-colors"
              :class="activeItem === item.id ? 
-                    'bg-gray-100 dark:bg-gray-700 text-blue-600 dark:text-blue-400' : 
-                    'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'">
+                    'bg-[#2e2e2e] text-[#3ecf8e]' : 
+                    'text-gray-400 hover:bg-[#232323] hover:text-white'">
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
-              :class="isCollapsed ? 'h-6 w-6 mx-auto' : 'h-6 w-6 mr-3'"
+              :class="isCollapsed ? 'h-5 w-5 mx-auto' : 'h-5 w-5 mr-3'"
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="currentColor" 
-              stroke-width="2"
+              stroke-width="1.5"
             >
               <path stroke-linecap="round" stroke-linejoin="round" :d="item.icon" />
             </svg>
@@ -110,14 +110,14 @@ const toggleSidebar = () => {
     </nav>
     
     <!-- User Profile -->
-    <div class="border-t border-gray-200 dark:border-gray-700 p-4 mt-auto">
+    <div class="border-t border-gray-800 p-4 mt-auto">
       <div class="flex items-center" :class="{ 'justify-center': isCollapsed }">
-        <div class="h-10 w-10 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+        <div class="h-8 w-8 rounded-full bg-[#3ecf8e] flex items-center justify-center text-white text-sm font-medium">
           U
         </div>
         <div v-if="!isCollapsed" class="ml-3">
-          <p class="text-sm font-medium text-gray-900 dark:text-white">User Name</p>
-          <p class="text-xs text-gray-500 dark:text-gray-400">Administrator</p>
+          <p class="text-xs font-medium text-white">User Name</p>
+          <p class="text-xs text-gray-500">Administrator</p>
         </div>
       </div>
     </div>
