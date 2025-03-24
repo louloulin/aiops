@@ -87,12 +87,12 @@ const toggleSidebar = () => {
     <nav class="flex-1 overflow-y-auto py-4">
       <ul class="space-y-1 px-2">
         <li v-for="item in menuItems" :key="item.id">
-          <a :href="item.path"
-             @click.prevent="setActiveItem(item.id)"
+          <router-link :to="item.path"
              class="flex items-center p-2 text-sm font-medium rounded-md transition-colors"
              :class="activeItem === item.id ? 
                     'bg-[#2e2e2e] text-[#3ecf8e]' : 
-                    'text-gray-400 hover:bg-[#232323] hover:text-white'">
+                    'text-gray-400 hover:bg-[#232323] hover:text-white'"
+             @click="setActiveItem(item.id)">
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
               :class="isCollapsed ? 'h-5 w-5 mx-auto' : 'h-5 w-5 mr-3'"
@@ -104,7 +104,7 @@ const toggleSidebar = () => {
               <path stroke-linecap="round" stroke-linejoin="round" :d="item.icon" />
             </svg>
             <span :class="{ 'hidden': isCollapsed }">{{ item.label }}</span>
-          </a>
+          </router-link>
         </li>
       </ul>
     </nav>

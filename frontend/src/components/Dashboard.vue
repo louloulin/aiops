@@ -40,8 +40,11 @@ const loading = ref({
 const fetchMetrics = async () => {
   try {
     loading.value.metrics = true;
-    const response = await fetch('/api/metrics');
-    metrics.value = await response.json();
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/metrics/latest`);
+    const data = await response.json();
+    if (data.success && data.data) {
+      metrics.value = data.data;
+    }
   } catch (error) {
     console.error('Error fetching metrics:', error);
   } finally {
@@ -52,10 +55,20 @@ const fetchMetrics = async () => {
 const fetchLogs = async () => {
   try {
     loading.value.logs = true;
-    const response = await fetch('/api/logs?limit=5');
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/logs?limit=5`);
     logs.value = await response.json();
   } catch (error) {
     console.error('Error fetching logs:', error);
+    // 开发环境中生成模拟数据
+    if (import.meta.env.DEV) {
+      logs.value = [
+        { level: 'error', message: 'Database connection failed', service: 'api', timestamp: new Date().toISOString() },
+        { level: 'warn', message: 'High CPU usage detected', service: 'monitoring', timestamp: new Date().toISOString() },
+        { level: 'info', message: 'Application started successfully', service: 'api', timestamp: new Date().toISOString() },
+        { level: 'debug', message: 'Processing request #1234', service: 'api', timestamp: new Date().toISOString() },
+        { level: 'info', message: 'User login successful', service: 'auth', timestamp: new Date().toISOString() },
+      ];
+    }
   } finally {
     loading.value.logs = false;
   }
@@ -64,10 +77,18 @@ const fetchLogs = async () => {
 const fetchDeployments = async () => {
   try {
     loading.value.deployments = true;
-    const response = await fetch('/api/deploy?limit=5');
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/deploy?limit=5`);
     deployments.value = await response.json();
   } catch (error) {
     console.error('Error fetching deployments:', error);
+    // 开发环境中生成模拟数据
+    if (import.meta.env.DEV) {
+      deployments.value = [
+        { id: 1, name: 'api-service', version: 'v1.2.3', status: 'success', timestamp: new Date().toISOString() },
+        { id: 2, name: 'frontend', version: 'v2.0.1', status: 'pending', timestamp: new Date().toISOString() },
+        { id: 3, name: 'database', version: 'v1.0.5', status: 'success', timestamp: new Date().toISOString() },
+      ];
+    }
   } finally {
     loading.value.deployments = false;
   }

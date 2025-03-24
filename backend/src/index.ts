@@ -5,6 +5,7 @@ import { cors } from 'hono/cors';
 import dotenv from 'dotenv';
 import { agentRoutes } from './routes/agent';
 import { metricsRoutes } from './routes/metrics';
+import { logsRoutes } from './routes/logs';
 import { monitoringAgent } from './agents/monitoringAgent';
 import { logAnalysisAgent } from './agents/logAnalysisAgent';
 import { autoHealingAgent } from './agents/autoHealingAgent';
@@ -21,7 +22,14 @@ const app = new Hono();
 
 // 中间件
 app.use(logger());
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:5177'],
+  allowHeaders: ['Content-Type', 'Authorization'],
+  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  exposeHeaders: ['Content-Length', 'Content-Type'],
+  credentials: true,
+  maxAge: 86400,
+}));
 
 // 健康检查路由
 app.get('/', (c) => c.json({ status: 'ok', message: 'AI OPS 后端服务正常运行' }));
@@ -29,6 +37,7 @@ app.get('/', (c) => c.json({ status: 'ok', message: 'AI OPS 后端服务正常�
 // API 路由
 app.route('/api/agent', agentRoutes);
 app.route('/api/metrics', metricsRoutes);
+app.route('/api/logs', logsRoutes);
 
 // 添加数据库路由
 app.get('/api/health', async (c) => {

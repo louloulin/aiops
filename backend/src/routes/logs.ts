@@ -103,4 +103,65 @@ app.get('/analysis', async (c: Context) => {
   }
 });
 
+// 生成模拟日志
+app.post('/generate-mock', async (c: Context) => {
+  try {
+    const logLevels = ['error', 'warn', 'info', 'debug'];
+    const services = ['api', 'database', 'auth', 'monitoring', 'frontend'];
+    const messages = [
+      'Application started successfully',
+      'Database connection failed',
+      'High CPU usage detected',
+      'User authentication successful',
+      'Cache invalidated',
+      'Background job completed',
+      'Rate limit exceeded',
+      'API request timeout',
+      'Memory usage increased',
+      'Scheduled task started'
+    ];
+    
+    const mockLogs = [];
+    
+    // 生成10条随机日志
+    for (let i = 0; i < 10; i++) {
+      const level = logLevels[Math.floor(Math.random() * logLevels.length)];
+      const service = services[Math.floor(Math.random() * services.length)];
+      const message = messages[Math.floor(Math.random() * messages.length)];
+      
+      // 创建时间戳，最近24小时内的随机时间
+      const timestamp = new Date(Date.now() - Math.floor(Math.random() * 24 * 60 * 60 * 1000));
+      
+      const mockLog = {
+        level,
+        message,
+        service,
+        timestamp: timestamp.toISOString(),
+        metadata: { requestId: `req_${Math.random().toString(36).substring(2, 10)}` }
+      };
+      
+      // 插入到数据库
+      const result = await pool.query(
+        'INSERT INTO logs (level, message, service, metadata, timestamp) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+        [level, message, service, mockLog.metadata, timestamp]
+      );
+      
+      mockLogs.push(result.rows[0]);
+    }
+    
+    return c.json({
+      success: true,
+      message: '模拟日志数据已生成并保存',
+      data: mockLogs
+    });
+  } catch (error) {
+    console.error('生成模拟日志失败:', error);
+    return c.json({ 
+      success: false, 
+      error: '生成模拟日志失败',
+      details: error instanceof Error ? error.message : String(error)
+    }, 500);
+  }
+});
+
 export const logsRoutes = app; 
