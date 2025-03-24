@@ -32,7 +32,7 @@ const error = ref<string | null>(null);
 const lastUpdated = ref<Date>(new Date());
 
 // API基础URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9700/api';
 
 // 获取最新系统指标
 const fetchLatestMetrics = async (): Promise<void> => {
