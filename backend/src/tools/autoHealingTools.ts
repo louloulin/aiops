@@ -1,217 +1,242 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-// Tool to diagnose system problems
+/**
+ * 诊断系统问题工具
+ * 用于诊断系统问题并提供修复建议
+ */
 export const diagnoseProblemTool = createTool({
   id: 'diagnose-problem',
-  description: 'Diagnose system problems based on symptoms and metrics',
+  description: '诊断系统问题并提供修复建议',
   inputSchema: z.object({
-    symptoms: z.array(z.string()).describe('Observed symptoms or error messages'),
-    metrics: z.record(z.string(), z.any()).optional().describe('System metrics during the issue'),
-    affectedServices: z.array(z.string()).optional().describe('Services affected by the issue'),
+    issueDescription: z.string().describe('问题描述'),
+    systemInfo: z.record(z.string(), z.any()).optional().describe('系统信息'),
+    logs: z.array(z.any()).optional().describe('相关日志'),
+    metrics: z.record(z.string(), z.any()).optional().describe('相关指标'),
   }),
   execute: async ({ context }) => {
-    // In a real implementation, this would use a diagnosis engine with machine learning
+    // 模拟诊断过程
+    const problems = [
+      {
+        name: 'CPU使用率过高',
+        signs: ['CPU使用率超过90%', '系统响应缓慢', '进程执行时间长'],
+        solutions: ['识别CPU密集型进程', '优化代码', '扩展资源'],
+      },
+      {
+        name: '内存泄漏',
+        signs: ['内存使用率持续增长', '应用重启后内存使用恢复', '应用响应缓慢'],
+        solutions: ['识别泄漏源', '更新依赖库', '重启应用'],
+      },
+      {
+        name: '磁盘空间不足',
+        signs: ['磁盘使用率高', '写入操作失败', '日志文件大小异常'],
+        solutions: ['清理日志文件', '扩展存储空间', '优化存储策略'],
+      },
+      {
+        name: '数据库连接问题',
+        signs: ['连接超时', '数据库错误日志', '查询执行缓慢'],
+        solutions: ['检查数据库服务状态', '优化连接池', '重启数据库服务'],
+      },
+      {
+        name: '网络连接问题',
+        signs: ['连接超时', '网络错误', '延迟增高'],
+        solutions: ['检查网络配置', '重启网络服务', '更新DNS配置'],
+      },
+    ];
     
-    // Simple rule-based diagnoses for demonstration
-    const diagnoses = [];
+    // 随机选择一个问题或根据描述匹配
+    let problem = problems[Math.floor(Math.random() * problems.length)];
     
-    // Check for high CPU patterns
-    if (context.metrics?.cpu && Array.isArray(context.metrics.cpu)) {
-      const cpuValues = context.metrics.cpu.map((m: any) => m.value);
-      const avgCpu = cpuValues.reduce((sum: number, val: number) => sum + val, 0) / cpuValues.length;
-      
-      if (avgCpu > 85) {
-        diagnoses.push({
-          issue: 'High CPU Usage',
-          confidence: 0.9,
-          details: `Average CPU usage of ${avgCpu.toFixed(2)}% indicates resource exhaustion`,
-          possibleCauses: ['Resource-intensive processes', 'Infinite loops', 'Inadequate scaling'],
-        });
-      }
-    }
-    
-    // Check for memory leaks
-    if (context.metrics?.memory && Array.isArray(context.metrics.memory)) {
-      const memoryValues = context.metrics.memory.map((m: any) => m.value);
-      const isIncreasing = memoryValues.every((val: number, i: number, arr: number[]) => 
-        i === 0 || val >= arr[i - 1]
+    // 如果有问题描述，尝试匹配最相关的问题
+    if (context.issueDescription) {
+      const desc = context.issueDescription.toLowerCase();
+      const matchedProblem = problems.find(p => 
+        desc.includes(p.name.toLowerCase()) || 
+        p.signs.some(s => desc.includes(s.toLowerCase()))
       );
       
-      if (isIncreasing && memoryValues[memoryValues.length - 1] > 80) {
-        diagnoses.push({
-          issue: 'Memory Leak',
-          confidence: 0.8,
-          details: 'Steadily increasing memory usage indicates a memory leak',
-          possibleCauses: ['Unclosed resources', 'Memory not being freed', 'Improper caching'],
-        });
+      if (matchedProblem) {
+        problem = matchedProblem;
       }
     }
     
-    // Check for specific symptom patterns
-    const hasConnectionIssues = context.symptoms.some(s => 
-      s.toLowerCase().includes('connection') && 
-      (s.toLowerCase().includes('refused') || s.toLowerCase().includes('timeout'))
-    );
-    
-    if (hasConnectionIssues) {
-      diagnoses.push({
-        issue: 'Network Connectivity Problems',
-        confidence: 0.7,
-        details: 'Connection issues detected in error messages',
-        possibleCauses: ['Network outage', 'Service down', 'Firewall issues', 'DNS problems'],
-      });
-    }
-    
     return {
-      diagnoses,
-      recommendedActions: diagnoses.map(d => {
-        switch (d.issue) {
-          case 'High CPU Usage':
-            return 'Identify and restart CPU-intensive processes';
-          case 'Memory Leak':
-            return 'Restart affected services with memory limits';
-          case 'Network Connectivity Problems':
-            return 'Check network connectivity and service availability';
-          default:
-            return 'Monitor system and gather more information';
-        }
-      }),
+      diagnosis: {
+        problemType: problem.name,
+        confidence: 0.8,
+        signs: problem.signs,
+        possibleCauses: [
+          '资源争用',
+          '配置错误',
+          '软件缺陷',
+          '硬件故障',
+        ],
+        recommendedSolutions: problem.solutions,
+      },
+      severity: '高',
+      estimatedResolutionTime: '30分钟',
     };
   },
 });
 
-// Tool to execute repair actions
-export const executeRepairTool = createTool({
-  id: 'execute-repair',
-  description: 'Execute repair actions to fix diagnosed issues',
+/**
+ * 执行修复操作工具
+ * 用于执行系统修复操作
+ */
+export const executeRemediationTool = createTool({
+  id: 'execute-remediation',
+  description: '执行系统修复操作',
   inputSchema: z.object({
-    action: z.enum([
-      'restart-service',
-      'scale-service',
-      'clear-cache',
-      'rollback-deployment',
-      'update-configuration',
-      'allocate-resources',
-    ]),
-    serviceName: z.string().describe('Name of the service to repair'),
-    parameters: z.record(z.string(), z.any()).optional().describe('Additional parameters for the repair action'),
+    problemType: z.string().describe('问题类型'),
+    action: z.string().describe('修复操作'),
+    target: z.string().optional().describe('目标系统或组件'),
+    parameters: z.record(z.string(), z.any()).optional().describe('操作参数'),
   }),
   execute: async ({ context }) => {
-    // In a real implementation, this would execute actual repair scripts or API calls
+    // 模拟执行修复操作
+    const actions: Record<string, { success: boolean; message: string; details: string }> = {
+      '重启服务': {
+        success: true,
+        message: `成功重启服务 ${context.target || '应用服务'}`,
+        details: '服务已恢复正常运行',
+      },
+      '清理缓存': {
+        success: true,
+        message: `成功清理 ${context.target || '系统'} 缓存`,
+        details: '缓存已清理，系统性能已恢复',
+      },
+      '释放内存': {
+        success: true,
+        message: `成功释放 ${context.target || '应用'} 内存`,
+        details: '内存使用率已降至正常水平',
+      },
+      '优化数据库': {
+        success: true,
+        message: `成功优化 ${context.target || '主'} 数据库`,
+        details: '数据库查询性能已提升',
+      },
+      '扩展资源': {
+        success: true,
+        message: `成功为 ${context.target || '系统'} 分配更多资源`,
+        details: '资源容量已增加，系统负载已平衡',
+      },
+    };
     
-    // Mock implementation that simulates repair actions
-    const startTime = Date.now();
-    const success = Math.random() > 0.2; // 80% success rate for simulation
+    // 默认修复结果
+    let result = {
+      success: false,
+      message: '未知修复操作',
+      details: '请指定有效的修复操作',
+    };
     
-    // Simulate action execution delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // 如果有匹配的操作，返回对应结果
+    if (context.action && actions[context.action]) {
+      result = actions[context.action];
+    }
     
-    const results: Record<string, any> = {
-      success,
+    return {
+      ...result,
+      timestamp: new Date().toISOString(),
+      actionTaken: context.action,
+      target: context.target || '系统',
+      problemType: context.problemType,
+    };
+  },
+});
+
+/**
+ * 验证修复结果工具
+ * 用于验证修复操作是否解决了问题
+ */
+export const verifyRemediationTool = createTool({
+  id: 'verify-remediation',
+  description: '验证修复操作是否解决了问题',
+  inputSchema: z.object({
+    problemType: z.string().describe('问题类型'),
+    action: z.string().describe('执行的修复操作'),
+    target: z.string().optional().describe('目标系统或组件'),
+    checkTimeoutSeconds: z.number().optional().describe('检查超时时间（秒）'),
+  }),
+  execute: async ({ context }) => {
+    // 模拟验证过程
+    type VerificationResult = {
+      success: boolean;
+      metrics: {
+        before: Record<string, string>;
+        after: Record<string, string>;
+      };
+    };
+    
+    const verificationResults: Record<string, VerificationResult> = {
+      'CPU使用率过高': {
+        success: true,
+        metrics: {
+          before: { cpu: '95%' },
+          after: { cpu: '45%' },
+        },
+      },
+      '内存泄漏': {
+        success: true,
+        metrics: {
+          before: { memory: '90%' },
+          after: { memory: '60%' },
+        },
+      },
+      '磁盘空间不足': {
+        success: true,
+        metrics: {
+          before: { disk: '95%' },
+          after: { disk: '70%' },
+        },
+      },
+      '数据库连接问题': {
+        success: true,
+        metrics: {
+          before: { connections: '0', responseTime: '超时' },
+          after: { connections: '10', responseTime: '120ms' },
+        },
+      },
+      '网络连接问题': {
+        success: true,
+        metrics: {
+          before: { latency: '500ms', packetLoss: '15%' },
+          after: { latency: '80ms', packetLoss: '0%' },
+        },
+      },
+    };
+    
+    // 默认验证结果
+    const defaultResult: VerificationResult = {
+      success: Math.random() > 0.2, // 80% 的概率成功
+      metrics: {
+        before: { status: '异常' },
+        after: { status: '正常' },
+      },
+    };
+    
+    // 获取匹配的验证结果或使用默认结果
+    const result = verificationResults[context.problemType] || defaultResult;
+    
+    return {
+      verified: result.success,
+      status: result.success ? '已解决' : '未解决',
+      metrics: result.metrics,
       action: context.action,
-      serviceName: context.serviceName,
-      executionTime: Date.now() - startTime,
-    };
-    
-    // Define variables used in switch cases
-    let replicas;
-    let version;
-    let cpu;
-    let memory;
-    
-    switch (context.action) {
-      case 'restart-service':
-        results.details = success ? 
-          `Successfully restarted service ${context.serviceName}` : 
-          `Failed to restart service ${context.serviceName}`;
-        break;
-      
-      case 'scale-service':
-        replicas = context.parameters?.replicas || 3;
-        results.details = success ? 
-          `Successfully scaled service ${context.serviceName} to ${replicas} replicas` : 
-          `Failed to scale service ${context.serviceName}`;
-        results.newReplicas = success ? replicas : undefined;
-        break;
-      
-      case 'clear-cache':
-        results.details = success ? 
-          `Successfully cleared cache for service ${context.serviceName}` : 
-          `Failed to clear cache for service ${context.serviceName}`;
-        results.bytesCleared = success ? Math.floor(Math.random() * 100000000) : 0;
-        break;
-      
-      case 'rollback-deployment':
-        version = context.parameters?.version || 'previous';
-        results.details = success ? 
-          `Successfully rolled back service ${context.serviceName} to version ${version}` : 
-          `Failed to roll back service ${context.serviceName}`;
-        results.newVersion = success ? version : undefined;
-        break;
-      
-      case 'update-configuration':
-        results.details = success ? 
-          `Successfully updated configuration for service ${context.serviceName}` : 
-          `Failed to update configuration for service ${context.serviceName}`;
-        results.configUpdated = success ? Object.keys(context.parameters || {}).length : 0;
-        break;
-      
-      case 'allocate-resources':
-        cpu = context.parameters?.cpu || '1';
-        memory = context.parameters?.memory || '2Gi';
-        results.details = success ? 
-          `Successfully allocated additional resources for service ${context.serviceName} (CPU: ${cpu}, Memory: ${memory})` : 
-          `Failed to allocate additional resources for service ${context.serviceName}`;
-        break;
-    }
-    
-    return results;
-  },
-});
-
-// Tool to verify repairs
-export const verifyRepairTool = createTool({
-  id: 'verify-repair',
-  description: 'Verify that a repair action resolved the issue',
-  inputSchema: z.object({
-    serviceName: z.string().describe('Name of the service that was repaired'),
-    metrics: z.record(z.string(), z.any()).optional().describe('Current system metrics after repair'),
-    checkType: z.enum(['metrics', 'connectivity', 'functionality', 'all']).default('all'),
-  }),
-  execute: async ({ context }) => {
-    // In a real implementation, this would check actual system state
-    
-    // Mock implementation for demonstration
-    const checks = {
-      metrics: Math.random() > 0.1, // 90% pass rate
-      connectivity: Math.random() > 0.05, // 95% pass rate
-      functionality: Math.random() > 0.15, // 85% pass rate,
-    };
-    
-    const checkResults = {
-      metrics: context.checkType === 'metrics' || context.checkType === 'all' ? checks.metrics : undefined,
-      connectivity: context.checkType === 'connectivity' || context.checkType === 'all' ? checks.connectivity : undefined,
-      functionality: context.checkType === 'functionality' || context.checkType === 'all' ? checks.functionality : undefined,
-    };
-    
-    const allChecked = Object.values(checkResults).filter(Boolean).length;
-    const allPassed = Object.values(checkResults).filter(val => val === true).length;
-    
-    return {
-      service: context.serviceName,
-      success: allChecked > 0 && allChecked === allPassed,
-      checks: checkResults,
-      details: allChecked === allPassed ? 
-        `All checks passed for service ${context.serviceName}` : 
-        `Some checks failed for service ${context.serviceName}`,
+      target: context.target || '系统',
+      problemType: context.problemType,
+      verificationTime: new Date().toISOString(),
+      message: result.success 
+        ? `${context.action}操作成功解决了${context.problemType}问题` 
+        : `${context.action}操作未能完全解决${context.problemType}问题，可能需要进一步操作`,
     };
   },
 });
 
-// Combine all auto-healing tools
+/**
+ * 自动修复工具集
+ */
 export const autoHealingTools = {
   diagnoseProblem: diagnoseProblemTool,
-  executeRepair: executeRepairTool,
-  verifyRepair: verifyRepairTool,
+  executeRemediation: executeRemediationTool,
+  verifyRemediation: verifyRemediationTool,
 }; 

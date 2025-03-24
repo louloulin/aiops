@@ -1,145 +1,126 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-// Tool to search logs with filters
-export const searchLogsTool = createTool({
-  id: 'search-logs',
-  description: 'Search logs with filters by service, level, time range, and keywords',
+/**
+ * 查询日志工具
+ * 用于从日志系统中查询和过滤日志
+ */
+export const queryLogsTool = createTool({
+  id: 'query-logs',
+  description: '从日志系统中查询和过滤日志',
   inputSchema: z.object({
-    service: z.string().optional().describe('Service name to filter logs'),
-    level: z.enum(['error', 'warn', 'info', 'debug', 'all']).optional().default('all'),
-    timeRange: z.string().optional().describe('Time range for logs, e.g., "1h", "24h"'),
-    keywords: z.array(z.string()).optional().describe('Keywords to search for in logs'),
-    limit: z.number().optional().default(100).describe('Maximum number of log entries to return'),
+    timeRange: z.string().optional().describe('时间范围，如 \'5m\'、\'1h\'、\'1d\''),
+    service: z.string().optional().describe('服务名称'),
+    level: z.enum(['debug', 'info', 'warn', 'error', 'critical']).optional().describe('日志级别'),
+    query: z.string().optional().describe('搜索查询'),
+    limit: z.number().optional().describe('返回的日志条数限制'),
   }),
   execute: async ({ context }) => {
-    // In a real implementation, this would query a log database or log aggregation system
-    
-    // Mock implementation for now with sample logs
-    const mockLogs = [
-      { timestamp: Date.now() - 3600000, service: 'api-gateway', level: 'error', message: 'Connection refused to auth service' },
-      { timestamp: Date.now() - 3400000, service: 'auth-service', level: 'error', message: 'Database connection timeout' },
-      { timestamp: Date.now() - 3200000, service: 'auth-service', level: 'info', message: 'Reconnecting to database' },
-      { timestamp: Date.now() - 3000000, service: 'auth-service', level: 'info', message: 'Database connection established' },
-      { timestamp: Date.now() - 2800000, service: 'api-gateway', level: 'info', message: 'Connection to auth service restored' },
-      { timestamp: Date.now() - 2600000, service: 'user-service', level: 'warn', message: 'High latency detected in user requests' },
-      { timestamp: Date.now() - 2400000, service: 'user-service', level: 'debug', message: 'Processing user request batch' },
-      { timestamp: Date.now() - 2200000, service: 'payment-service', level: 'error', message: 'Payment gateway connection failed' },
-      { timestamp: Date.now() - 2000000, service: 'notification-service', level: 'info', message: 'Sending batch notifications' },
-      { timestamp: Date.now() - 1800000, service: 'notification-service', level: 'warn', message: 'Notification queue building up' },
+    // 模拟数据
+    const levels = ['debug', 'info', 'warn', 'error', 'critical'];
+    const services = ['api-gateway', 'auth-service', 'user-service', 'product-service', 'order-service'];
+    const messagePrefixes = [
+      'Started', 'Completed', 'Failed to', 'Processing', 'Received', 'Sent', 'Connected to',
+      'Disconnected from', 'Initialized', 'Terminated', 'Validated', 'Rejected', 'Approved',
     ];
-
-    // Apply filters
-    let filteredLogs = [...mockLogs];
+    const messageObjects = ['request', 'response', 'transaction', 'connection', 'session', 'job', 'task', 'process'];
     
-    if (context.service) {
-      filteredLogs = filteredLogs.filter(log => log.service === context.service);
-    }
+    const limit = context.limit || 10;
     
-    if (context.level && context.level !== 'all') {
-      filteredLogs = filteredLogs.filter(log => log.level === context.level);
-    }
-    
-    if (context.keywords && context.keywords.length > 0) {
-      filteredLogs = filteredLogs.filter(log => 
-        context.keywords!.some(keyword => log.message.toLowerCase().includes(keyword.toLowerCase()))
-      );
-    }
-    
-    // Apply limit
-    const limit = context.limit || 100;
-    filteredLogs = filteredLogs.slice(0, limit);
+    const logs = Array.from({ length: limit }, (_, i) => {
+      const level = context.level || levels[Math.floor(Math.random() * levels.length)];
+      const service = context.service || services[Math.floor(Math.random() * services.length)];
+      const prefix = messagePrefixes[Math.floor(Math.random() * messagePrefixes.length)];
+      const object = messageObjects[Math.floor(Math.random() * messageObjects.length)];
+      const timestamp = new Date(Date.now() - i * 60000).toISOString();
+      
+      return {
+        id: `log-${Date.now()}-${i}`,
+        timestamp,
+        level,
+        service,
+        message: `${prefix} ${object} ${i}`,
+        context: {
+          requestId: `req-${Math.random().toString(36).substring(2, 9)}`,
+          userId: Math.floor(Math.random() * 1000),
+          duration: Math.floor(Math.random() * 1000),
+        }
+      };
+    });
     
     return {
-      logs: filteredLogs,
-      count: filteredLogs.length,
-      totalCount: mockLogs.length,
+      logs,
+      count: logs.length,
+      query: context.query || '',
+      timeRange: context.timeRange || '15m',
     };
   },
 });
 
-// Tool to analyze log patterns and detect anomalies
+/**
+ * 分析日志模式工具
+ * 用于分析日志中的模式和趋势
+ */
 export const analyzeLogPatternsTool = createTool({
   id: 'analyze-log-patterns',
-  description: 'Analyze logs to detect patterns and anomalies that might indicate issues',
+  description: '分析日志中的模式和趋势',
   inputSchema: z.object({
     logs: z.array(z.object({
-      timestamp: z.number(),
-      service: z.string(),
+      id: z.string(),
+      timestamp: z.string(),
       level: z.string(),
+      service: z.string(),
       message: z.string(),
+      context: z.record(z.string(), z.any()).optional(),
     })),
   }),
   execute: async ({ context }) => {
-    // In a real implementation, this would use more sophisticated pattern recognition
+    // 模拟日志分析结果
+    const logs = context.logs;
+    const errorCount = logs.filter(log => log.level === 'error' || log.level === 'critical').length;
+    const warnCount = logs.filter(log => log.level === 'warn').length;
     
-    // Basic implementation for demonstration
-    const errorCount = context.logs.filter(log => log.level === 'error').length;
-    const warnCount = context.logs.filter(log => log.level === 'warn').length;
-    
-    const serviceErrors: Record<string, number> = {};
-    const serviceGroups: Record<string, typeof context.logs> = {};
-    
-    // Group logs by service and count errors per service
-    context.logs.forEach(log => {
+    // 按服务分组
+    const serviceGroups: Record<string, number> = {};
+    logs.forEach(log => {
       if (!serviceGroups[log.service]) {
-        serviceGroups[log.service] = [];
+        serviceGroups[log.service] = 0;
       }
-      serviceGroups[log.service].push(log);
-      
-      if (log.level === 'error') {
-        serviceErrors[log.service] = (serviceErrors[log.service] || 0) + 1;
-      }
+      serviceGroups[log.service]++;
     });
     
-    // Identify services with most errors
-    const servicesWithMostErrors = Object.entries(serviceErrors)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
-      .map(([service, count]) => ({ service, count }));
-    
-    // Look for temporal patterns (errors happening close to each other)
-    const timeBasedPatterns = [];
-    const sortedLogs = [...context.logs].sort((a, b) => a.timestamp - b.timestamp);
-    
-    for (let i = 0; i < sortedLogs.length - 1; i++) {
-      const currentLog = sortedLogs[i];
-      const nextLog = sortedLogs[i + 1];
-      
-      // If two errors occur within 5 minutes of each other
-      if (currentLog.level === 'error' && nextLog.level === 'error' && 
-          nextLog.timestamp - currentLog.timestamp < 300000) {
-        timeBasedPatterns.push({
-          service1: currentLog.service,
-          service2: nextLog.service,
-          message1: currentLog.message,
-          message2: nextLog.message,
-          timeDifference: (nextLog.timestamp - currentLog.timestamp) / 1000, // in seconds
-        });
-      }
-    }
+    // 模拟找出模式
+    const patterns = [
+      {
+        name: '错误率升高',
+        description: '错误日志比例超过10%',
+        severity: errorCount / logs.length > 0.1 ? '高' : '低',
+        count: errorCount,
+      },
+      {
+        name: '警告聚集',
+        description: '短时间内出现多个警告日志',
+        severity: warnCount > 3 ? '中' : '低',
+        count: warnCount,
+      },
+    ];
     
     return {
-      summary: {
-        totalLogs: context.logs.length,
-        errorCount,
-        warnCount,
-        infoCount: context.logs.filter(log => log.level === 'info').length,
-        debugCount: context.logs.filter(log => log.level === 'debug').length,
+      patterns,
+      errorRate: errorCount / logs.length,
+      serviceDistribution: serviceGroups,
+      timespan: {
+        start: logs[logs.length - 1]?.timestamp,
+        end: logs[0]?.timestamp,
       },
-      anomalies: {
-        servicesWithMostErrors,
-        timeBasedPatterns,
-      },
-      insights: errorCount > context.logs.length * 0.2 ? 
-        'High error rate detected, investigate system stability issues' : 
-        'System appears to be functioning normally',
     };
   },
 });
 
-// Combine all log analysis tools
+/**
+ * 日志分析工具集
+ */
 export const logAnalysisTools = {
-  searchLogs: searchLogsTool,
+  queryLogs: queryLogsTool,
   analyzeLogPatterns: analyzeLogPatternsTool,
 }; 

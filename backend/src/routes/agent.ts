@@ -30,21 +30,26 @@ agentRoutes.post('/chat', async (c) => {
     // Select the appropriate agent based on type
     const agent = getAgentByType(agentType);
     
+    // Format message for the agent
+    const formattedMessage = {
+      role: "user",
+      content: message
+    };
+    
     // Process the message with the agent using the Mastra API
     let response;
     
     if (conversationId) {
-      // Create a unique resourceId from the conversationId
-      const resourceId = `user-${conversationId.split('_')[0] || 'default'}`;
+      const resourceId = `conv:${conversationId}`;
+      const threadId = conversationId;
       
-      // Use memory features when we have a conversation ID
-      response = await agent.generate(message, {
+      response = await agent.generate([formattedMessage], {
         resourceId,
-        threadId: conversationId,
+        threadId
       });
     } else {
       // Simple generate call without memory context
-      response = await agent.generate(message);
+      response = await agent.generate([formattedMessage]);
     }
     
     // Extract response content and conversation ID
