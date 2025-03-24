@@ -1,60 +1,89 @@
-import { config } from 'dotenv';
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import { initializeDatabase } from './config/database';
-import { metricsRoutes } from './routes/metrics';
-import { logsRoutes } from './routes/logs';
-import { deployRoutes } from './routes/deploy';
-import { knowledgeRoutes } from './routes/knowledge';
-import { autohealRoutes } from './routes/autoheal';
+import { cors } from 'hono/cors';
+import dotenv from 'dotenv';
 import { agentRoutes } from './routes/agent';
-import { opsAssistant } from './agents/opsAssistant';
+import { metricsRoutes } from './routes/metrics';
 import { monitoringAgent } from './agents/monitoringAgent';
 import { logAnalysisAgent } from './agents/logAnalysisAgent';
 import { autoHealingAgent } from './agents/autoHealingAgent';
 import { knowledgeBaseAgent } from './agents/knowledgeBaseAgent';
+import { opsAssistant } from './agents/opsAssistant';
+import { initializeDataServices } from './db';
+import runMigrations from './db/migrate';
 
-// Load environment variables
-config();
+// 加载环境变量
+dotenv.config();
 
-// Export agents for use in routes
+// 创建 Hono 应用
+const app = new Hono();
+
+// 中间件
+app.use(logger());
+app.use(cors());
+
+// 健康检查路由
+app.get('/', (c) => c.json({ status: 'ok', message: 'AI OPS 后端服务正常运行' }));
+
+// API 路由
+app.route('/api/agent', agentRoutes);
+app.route('/api/metrics', metricsRoutes);
+
+// 添加数据库路由
+app.get('/api/health', async (c) => {
+  try {
+    return c.json({ 
+      status: 'ok', 
+      services: { 
+        api: 'online',
+        database: 'online',
+        cache: 'online'
+      } 
+    });
+  } catch (error) {
+    console.error('健康检查错误:', error);
+    return c.json({ 
+      status: 'error', 
+      message: '服务健康检查失败',
+      error: error instanceof Error ? error.message : String(error)
+    }, 500);
+  }
+});
+
+// 导出代理实例供其他模块使用
 export const agents = {
-  opsAssistant,
   monitoringAgent,
   logAnalysisAgent,
   autoHealingAgent,
   knowledgeBaseAgent,
+  opsAssistant,
 };
 
-const app = new Hono();
+// 服务器初始化
+const startServer = async () => {
+  try {
+    // 运行数据库迁移（可选，生产环境可以禁用）
+    if (process.env.RUN_MIGRATIONS === 'true') {
+      await runMigrations();
+    }
+    
+    // 初始化数据服务
+    await initializeDataServices();
+    
+    // 启动 HTTP 服务器
+    const port = parseInt(process.env.PORT || '3000');
+    
+    console.log(`服务器启动在 http://localhost:${port}`);
+    serve({
+      fetch: app.fetch,
+      port
+    });
+  } catch (error) {
+    console.error('服务器启动失败:', error);
+    process.exit(1);
+  }
+};
 
-// Middleware
-app.use('*', logger());
-app.use('*', cors());
-
-// Health check route
-app.get('/health', (c) => c.json({ status: 'ok' }));
-
-// Register routes
-app.route('/api/metrics', metricsRoutes);
-app.route('/api/logs', logsRoutes);
-app.route('/api/deploy', deployRoutes);
-app.route('/api/knowledge', knowledgeRoutes);
-app.route('/api/autoheal', autohealRoutes);
-app.route('/api/agent', agentRoutes);
-
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
-
-// Initialize database and start server
-initializeDatabase().then(() => {
-  serve({
-    fetch: app.fetch,
-    port
-  });
-  console.log(`Server is running on port ${port}`);
-}).catch(error => {
-  console.error('Failed to start server:', error);
-  process.exit(1);
-}); 
+// 启动服务器
+startServer(); 

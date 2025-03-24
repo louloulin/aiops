@@ -6,8 +6,10 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "types": ["vite/client"],
-    "ignoreDeprecations": "5.0"
+    "types": ["vite/client", "node"],
+    "ignoreDeprecations": "5.0",
+    "lib": ["ES2015", "DOM", "DOM.Iterable"],
+    "moduleResolution": "node"
   },
   "references": [
     {

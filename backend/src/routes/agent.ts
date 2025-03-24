@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { agents } from '../index';
+import { CoreMessage } from '@mastra/core';
 
 const agentRoutes = new Hono();
 
@@ -31,8 +32,8 @@ agentRoutes.post('/chat', async (c) => {
     const agent = getAgentByType(agentType);
     
     // Format message for the agent
-    const formattedMessage = {
-      role: "user",
+    const formattedMessage: CoreMessage = {
+      role: 'user',
       content: message
     };
     

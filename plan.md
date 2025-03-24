@@ -25,7 +25,7 @@ AI OPS 是一个基于 AI 技术的智能化运维平台，旨在帮助团队更
 - **向量数据库**：支持 Pinecone、Qdrant 或 Pgvector 等
 - **消息队列**：用于处理异步任务和事件驱动架构 (Kafka, RabbitMQ)
 - **监控工具**：集成 Prometheus、Grafana、Datadog、CloudWatch 等
-- **数据存储**：支持 PostgreSQL、MongoDB、ClickHouse 等时序数据库
+- **数据存储**：✅ PostgreSQL (已实现)、✅ Redis 缓存 (已实现)、MongoDB、ClickHouse 等时序数据库
 - **工作流引擎**：基于 YAML 的声明式工作流，类似 GitHub Actions
 
 ## 2. 系统架构
@@ -393,9 +393,42 @@ export const prometheusProviderFactory = createTool({
 });
 ```
 
-### 3.7 业务指标监控系统
+### 3.7 数据存储层
 
-#### 3.7.1 功能
+#### 3.7.1 PostgreSQL 数据库集成 ✅
+
+已实现 PostgreSQL 数据库集成，用于存储系统监控数据和事件信息。主要功能包括：
+
+- 连接池管理：优化数据库连接资源使用
+- SQL 查询性能监控：记录长时间运行的查询
+- 自动创建数据表：系统初始化时自动创建所需表结构
+- 事务管理：支持自动回滚和错误处理
+- 数据模型映射：简化 TS 对象与数据库表的映射
+
+关键表结构：
+- `system_metrics`: 存储系统指标数据（CPU、内存、磁盘、网络等）
+- `anomalies`: 记录检测到的系统异常
+- `system_events`: 跟踪系统事件和状态变化
+
+#### 3.7.2 Redis 缓存系统 ✅
+
+已实现 Redis 缓存系统，用于提升查询性能和减轻数据库负载。主要功能包括：
+
+- 高性能查询缓存：缓存频繁请求的数据
+- 自动缓存失效策略：基于时间的缓存失效机制
+- 智能重连机制：断线自动重连，提高系统稳定性
+- 缓存预热：系统启动时预加载关键数据
+- 分布式锁支持：避免并发操作冲突
+
+缓存使用场景：
+- 系统最新指标缓存：减少数据库查询，提升前端显示性能
+- 聚合统计数据缓存：复杂统计计算结果缓存
+- 历史数据查询缓存：按时间范围的查询结果缓存
+- 智能体查询结果缓存：减少AI模型调用频率，降低成本
+
+### 3.8 业务指标监控系统
+
+#### 3.8.1 功能
 
 - 自定义业务指标定义和采集
 - 业务指标聚合和计算
@@ -403,7 +436,7 @@ export const prometheusProviderFactory = createTool({
 - 业务指标与系统指标关联分析
 - 业务影响评估
 
-#### 3.7.2 实现方式
+#### 3.8.2 实现方式
 
 结合监控数据和业务数据，构建业务指标监控系统：
 
@@ -436,9 +469,9 @@ export const businessMetricDefinitionTool = createTool({
 });
 ```
 
-### 3.8 Grafana 集成系统
+### 3.9 Grafana 集成系统
 
-#### 3.8.1 功能
+#### 3.9.1 功能
 
 - 自动生成 Grafana 仪表盘
 - 管理 Grafana 告警规则
@@ -446,7 +479,7 @@ export const businessMetricDefinitionTool = createTool({
 - 可视化配置自动化
 - 仪表盘版本控制
 
-#### 3.8.2 实现方式
+#### 3.9.2 实现方式
 
 通过 Grafana API 实现仪表盘和告警的自动化管理：
 
@@ -516,9 +549,9 @@ export const grafanaAlertRuleGeneratorTool = createTool({
 });
 ```
 
-### 3.9 告警管理系统
+### 3.10 告警管理系统
 
-#### 3.9.1 功能
+#### 3.10.1 功能
 
 - 集中管理多源告警
 - 告警去重和聚合
@@ -528,7 +561,7 @@ export const grafanaAlertRuleGeneratorTool = createTool({
 - 告警处理工作流
 - 告警统计和报告
 
-#### 3.9.2 实现方式
+#### 3.10.2 实现方式
 
 使用声明式工作流定义告警处理流程，类似 Keep 的工作流系统：
 
