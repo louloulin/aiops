@@ -1,0 +1,9 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# 要求
+# 前端在front，使用next.js + shadcn
+# 后端在 backend使用hono包含智能体
