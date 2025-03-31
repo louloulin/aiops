@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import MetricsCard from './MetricsCard.vue';
-import LogsCard from './LogsCard.vue';
-import DeploymentCard from './DeploymentCard.vue';
-import StatusCard from './StatusCard.vue';
+import MetricsCard from '../components/MetricsCard.vue';
+import LogsCard from '../components/LogsCard.vue';
+import DeploymentCard from '../components/DeploymentCard.vue';
+import StatusCard from '../components/StatusCard.vue';
 
 interface Metrics {
   cpu: {

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
+import { useRoute } from 'vue-router';
+
+const route = useRoute();
 
 interface MenuItem {
   id: string;
@@ -53,16 +56,17 @@ const menuItems: MenuItem[] = [
   }
 ];
 
-const activeItem = ref('dashboard');
-
-const setActiveItem = (id: string) => {
-  activeItem.value = id;
-};
-
 const isCollapsed = ref(false);
 
 const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value;
+};
+
+const isActive = (path: string) => {
+  if (path === '/') {
+    return route.path === '/';
+  }
+  return route.path.startsWith(path);
 };
 </script>
 
@@ -89,10 +93,9 @@ const toggleSidebar = () => {
         <li v-for="item in menuItems" :key="item.id">
           <router-link :to="item.path"
              class="flex items-center p-2 text-sm font-medium rounded-md transition-colors"
-             :class="activeItem === item.id ? 
+             :class="isActive(item.path) ? 
                     'bg-[#2e2e2e] text-[#3ecf8e]' : 
-                    'text-gray-400 hover:bg-[#232323] hover:text-white'"
-             @click="setActiveItem(item.id)">
+                    'text-gray-400 hover:bg-[#232323] hover:text-white'">
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
               :class="isCollapsed ? 'h-5 w-5 mx-auto' : 'h-5 w-5 mr-3'"

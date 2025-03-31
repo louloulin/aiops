@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import Dashboard from './components/Dashboard.vue';
 import Sidebar from './components/Sidebar.vue';
 
 const darkMode = ref(localStorage.getItem('darkMode') === 'true');
@@ -88,7 +87,7 @@ document.addEventListener('fullscreenchange', handleFullscreenChange);
         
         <!-- Main Content -->
         <main class="flex-1 overflow-auto py-6 px-6">
-          <Dashboard />
+          <router-view></router-view>
         </main>
         
         <!-- Footer -->
