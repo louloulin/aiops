@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../components/ui/card';
 import LogsAnalytics from '../components/logs/LogsAnalytics.vue';
+import { Suspense } from 'vue';
 
 // 日志级别选项
 const logLevels = [
@@ -244,191 +245,201 @@ onMounted(() => {
   <div class="container mx-auto p-4 space-y-6">
     <div class="flex justify-between items-center">
       <h1 class="text-2xl font-bold">日志管理</h1>
-      
-      <div class="flex space-x-2">
-        <Tabs v-model="activeTab" class="w-auto">
-          <TabsList>
-            <TabsTrigger value="logs">日志列表</TabsTrigger>
-            <TabsTrigger value="analytics">日志分析</TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
     </div>
     
-    <TabsContent value="logs" class="mt-0">
-      <!-- 筛选控件 -->
-      <div class="flex flex-col md:flex-row gap-4 mb-6">
-        <div class="flex-1">
-          <Input v-model="searchQuery" placeholder="搜索日志..." />
-        </div>
-        
-        <div class="flex flex-col sm:flex-row gap-2">
-          <Select v-model="selectedTimeRange">
-            <SelectTrigger class="w-[140px]">
-              <SelectValue placeholder="选择时间范围" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="range in timeRanges" :key="range.value" :value="range.value">
-                {{ range.label }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+    <Tabs v-model="activeTab" class="w-full">
+      <div class="flex justify-between items-center mb-4">
+        <div></div> <!-- 占位，确保布局平衡 -->
+        <TabsList>
+          <TabsTrigger value="logs">日志列表</TabsTrigger>
+          <TabsTrigger value="analytics">日志分析</TabsTrigger>
+        </TabsList>
+      </div>
+      
+      <TabsContent value="logs" class="mt-2">
+        <!-- 筛选控件 -->
+        <div class="flex flex-col md:flex-row gap-4 mb-6">
+          <div class="flex-1">
+            <Input v-model="searchQuery" placeholder="搜索日志..." />
+          </div>
           
-          <Button @click="refreshLogs">刷新</Button>
-          <Button @click="analyzeLogs" :disabled="isLoading">分析</Button>
-          <Button variant="outline" @click="exportLogs">导出</Button>
-        </div>
-      </div>
-      
-      <!-- 筛选标签 -->
-      <div class="flex flex-wrap gap-2 mb-6">
-        <div class="flex flex-wrap gap-2 mr-4">
-          <div v-for="level in logLevels" :key="level.value" class="flex items-center">
-            <label class="inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                :value="level.value" 
-                v-model="selectedLogLevels"
-                class="sr-only"
-              />
-              <span 
-                class="px-2 py-1 text-xs font-medium rounded flex items-center mr-2"
-                :class="selectedLogLevels.includes(level.value) ? getLogLevelStyle(level.value) : 'bg-gray-100 text-gray-500'"
-              >
-                <span :class="level.color" class="w-2 h-2 rounded-full mr-1.5"></span>
-                {{ level.label }}
-              </span>
-            </label>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <Select v-model="selectedTimeRange">
+              <SelectTrigger class="w-[140px]">
+                <SelectValue placeholder="选择时间范围" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="range in timeRanges" :key="range.value" :value="range.value">
+                  {{ range.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Button @click="refreshLogs">刷新</Button>
+            <Button @click="analyzeLogs" :disabled="isLoading">分析</Button>
+            <Button variant="outline" @click="exportLogs">导出</Button>
           </div>
         </div>
         
-        <div class="flex flex-wrap gap-2">
-          <div v-for="service in services" :key="service.value" class="flex items-center">
-            <label class="inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                :value="service.value" 
-                v-model="selectedServices"
-                class="sr-only"
-              />
-              <span 
-                class="px-2 py-1 text-xs font-medium rounded flex items-center mr-2"
-                :class="selectedServices.includes(service.value) ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-gray-100 text-gray-500'"
-              >
-                {{ service.label }}
-              </span>
-            </label>
-          </div>
+        <!-- 筛选标签 -->
+        <div class="flex flex-wrap gap-2 mb-6">
+          <div class="flex flex-wrap gap-2 mr-4">
+            <div v-for="level in logLevels" :key="level.value" class="flex items-center">
+              <label class="inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  :value="level.value" 
+                  v-model="selectedLogLevels"
+                  class="sr-only"
+                />
+                <span 
+                  class="px-2 py-1 text-xs font-medium rounded flex items-center mr-2"
+                  :class="selectedLogLevels.includes(level.value) ? getLogLevelStyle(level.value) : 'bg-gray-100 text-gray-500'"
+                >
+                  <span :class="level.color" class="w-2 h-2 rounded-full mr-1.5"></span>
+                  {{ level.label }}
+                </span>
+              </label>
         </div>
       </div>
       
-      <!-- 日志表格 -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
-        <div class="overflow-x-auto">
-          <table class="w-full">
-            <thead>
-              <tr class="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">时间</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">级别</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">服务</th>
-                <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">消息</th>
+          <div class="flex flex-wrap gap-2">
+            <div v-for="service in services" :key="service.value" class="flex items-center">
+              <label class="inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  :value="service.value" 
+                  v-model="selectedServices"
+                  class="sr-only"
+                />
+                <span 
+                  class="px-2 py-1 text-xs font-medium rounded flex items-center mr-2"
+                  :class="selectedServices.includes(service.value) ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' : 'bg-gray-100 text-gray-500'"
+                >
+                  {{ service.label }}
+                </span>
+              </label>
+      </div>
+          </div>
+        </div>
+        
+        <!-- 日志表格 -->
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full">
+              <thead>
+                <tr class="bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600">
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">时间</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">级别</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">服务</th>
+                  <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">消息</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-              <tr v-for="log in filteredLogs" :key="log.id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
-                  {{ formatTimestamp(log.timestamp) }}
-                </td>
-                <td class="px-4 py-3 text-sm whitespace-nowrap">
-                  <span :class="getLogLevelStyle(log.level)" class="px-2 py-1 text-xs font-medium rounded">
-                    {{ log.level.toUpperCase() }}
+              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
+                <tr v-for="log in filteredLogs" :key="log.id" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 whitespace-nowrap">
+                    {{ formatTimestamp(log.timestamp) }}
+                  </td>
+                  <td class="px-4 py-3 text-sm whitespace-nowrap">
+                    <span :class="getLogLevelStyle(log.level)" class="px-2 py-1 text-xs font-medium rounded">
+                      {{ log.level.toUpperCase() }}
                   </span>
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                  {{ log.service }}
+                  <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    {{ log.service }}
                 </td>
-                <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
-                  <div class="flex flex-col">
-                    <span class="font-medium text-gray-900 dark:text-white">{{ log.message }}</span>
-                    <span class="text-xs text-gray-500">
-                      {{ JSON.stringify(log.context) }}
-                    </span>
-                  </div>
+                  <td class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400">
+                    <div class="flex flex-col">
+                      <span class="font-medium text-gray-900 dark:text-white">{{ log.message }}</span>
+                      <span class="text-xs text-gray-500">
+                        {{ JSON.stringify(log.context) }}
+                      </span>
+                    </div>
                 </td>
-              </tr>
-              
-              <tr v-if="filteredLogs.length === 0" class="hover:bg-gray-50 dark:hover:bg-gray-700">
-                <td colspan="4" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
-                  未找到符合条件的日志
+                </tr>
+                
+                <tr v-if="filteredLogs.length === 0" class="hover:bg-gray-50 dark:hover:bg-gray-700">
+                  <td colspan="4" class="px-4 py-3 text-sm text-gray-500 dark:text-gray-400 text-center">
+                    未找到符合条件的日志
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
-      
-      <!-- 日志分析结果卡片 -->
-      <div v-if="showAnalysis" class="mt-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>日志分析结果</CardTitle>
-            <CardDescription>
-              AI 系统对当前筛选日志的分析
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div class="space-y-6">
-              <!-- 异常检测 -->
-              <div>
-                <h3 class="text-lg font-medium mb-2">检测到的异常</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div 
-                    v-for="(anomaly, index) in analysisResults.anomalies" 
-                    :key="index"
-                    class="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg"
-                  >
-                    <div class="font-medium text-red-800 dark:text-red-300 mb-1">
-                      {{ anomaly.type === 'spike' ? '异常峰值' : '异常模式' }}: {{ anomaly.service }}
-                    </div>
-                    <div class="text-sm text-red-700 dark:text-red-400">
-                      {{ anomaly.metric === 'errors' ? '错误率异常' : '延迟异常' }}
-                      (置信度: {{ Math.round(anomaly.confidence * 100) }}%)
+        
+        <!-- 日志分析结果卡片 -->
+        <div v-if="showAnalysis" class="mt-8">
+          <Card>
+            <CardHeader>
+              <CardTitle>日志分析结果</CardTitle>
+              <CardDescription>
+                AI 系统对当前筛选日志的分析
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div class="space-y-6">
+                <!-- 异常检测 -->
+                <div>
+                  <h3 class="text-lg font-medium mb-2">检测到的异常</h3>
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div 
+                      v-for="(anomaly, index) in analysisResults.anomalies" 
+                      :key="index"
+                      class="bg-red-50 dark:bg-red-900/20 p-4 rounded-lg"
+                    >
+                      <div class="font-medium text-red-800 dark:text-red-300 mb-1">
+                        {{ anomaly.type === 'spike' ? '异常峰值' : '异常模式' }}: {{ anomaly.service }}
+                      </div>
+                      <div class="text-sm text-red-700 dark:text-red-400">
+                        {{ anomaly.metric === 'errors' ? '错误率异常' : '延迟异常' }}
+                        (置信度: {{ Math.round(anomaly.confidence * 100) }}%)
+                      </div>
                     </div>
                   </div>
                 </div>
+                
+                <!-- 洞察 -->
+                <div>
+                  <h3 class="text-lg font-medium mb-2">洞察</h3>
+                  <ul class="list-disc list-inside space-y-2">
+                    <li v-for="(insight, index) in analysisResults.insights" :key="index" class="text-gray-700 dark:text-gray-300">
+                      {{ insight }}
+                    </li>
+                  </ul>
+                </div>
+                
+                <!-- 建议操作 -->
+                <div>
+                  <h3 class="text-lg font-medium mb-2">建议操作</h3>
+                  <ul class="list-disc list-inside space-y-2">
+                    <li v-for="(action, index) in analysisResults.suggestedActions" :key="index" class="text-gray-700 dark:text-gray-300">
+                      {{ action }}
+                    </li>
+                  </ul>
+                </div>
               </div>
-              
-              <!-- 洞察 -->
-              <div>
-                <h3 class="text-lg font-medium mb-2">洞察</h3>
-                <ul class="list-disc list-inside space-y-2">
-                  <li v-for="(insight, index) in analysisResults.insights" :key="index" class="text-gray-700 dark:text-gray-300">
-                    {{ insight }}
-                  </li>
-                </ul>
-              </div>
-              
-              <!-- 建议操作 -->
-              <div>
-                <h3 class="text-lg font-medium mb-2">建议操作</h3>
-                <ul class="list-disc list-inside space-y-2">
-                  <li v-for="(action, index) in analysisResults.suggestedActions" :key="index" class="text-gray-700 dark:text-gray-300">
-                    {{ action }}
-                  </li>
-                </ul>
-              </div>
+            </CardContent>
+            <CardFooter>
+              <Button variant="outline" @click="showAnalysis = false">关闭分析</Button>
+              <Button class="ml-2">创建事件</Button>
+            </CardFooter>
+          </Card>
+        </div>
+      </TabsContent>
+      
+      <TabsContent value="analytics" class="mt-2">
+        <Suspense>
+          <template #default>
+            <LogsAnalytics :timeRange="selectedTimeRange" />
+          </template>
+          <template #fallback>
+            <div class="flex items-center justify-center h-96">
+              <div class="text-gray-400">加载日志分析中...</div>
             </div>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" @click="showAnalysis = false">关闭分析</Button>
-            <Button class="ml-2">创建事件</Button>
-          </CardFooter>
-        </Card>
-      </div>
-    </TabsContent>
-    
-    <TabsContent value="analytics" class="mt-0">
-      <LogsAnalytics :timeRange="selectedTimeRange" />
-    </TabsContent>
+          </template>
+        </Suspense>
+      </TabsContent>
+    </Tabs>
   </div>
 </template> 
