@@ -1,0 +1,637 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue';
+import debounce from 'lodash/debounce';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+
+interface LogPattern {
+  id: string;
+  name: string;
+  pattern: string;
+  severity: 'low' | 'medium' | 'high';
+  occurrences: number;
+  example: string;
+}
+
+interface LogEntry {
+  id: string;
+  timestamp: string;
+  level: 'error' | 'warn' | 'info' | 'debug';
+  service: string;
+  message: string;
+}
+
+// State
+const logs = ref<LogEntry[]>([]);
+const patterns = ref<LogPattern[]>([]);
+const searchQuery = ref('');
+const selectedLevel = ref('');
+const timeRange = ref('1h');
+const currentPage = ref(1);
+const pageSize = 10;
+
+// API基础URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9700/api';
+
+// Computed
+const filteredLogs = computed(() => {
+  let filtered = [...logs.value];
+  
+  if (searchQuery.value) {
+    filtered = filtered.filter(log => 
+      log.message.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
+      log.service.toLowerCase().includes(searchQuery.value.toLowerCase())
+    );
+  }
+  
+  if (selectedLevel.value) {
+    filtered = filtered.filter(log => log.level === selectedLevel.value);
+  }
+  
+  return filtered;
+});
+
+const totalLogs = computed(() => filteredLogs.value.length);
+const startIndex = computed(() => (currentPage.value - 1) * pageSize);
+const endIndex = computed(() => Math.min(startIndex.value + pageSize, totalLogs.value));
+
+// Methods
+const handleSearch = debounce(() => {
+  currentPage.value = 1;
+  fetchLogs();
+}, 300);
+
+const formatTimestamp = (timestamp: string): string => {
+  return new Date(timestamp).toLocaleString();
+};
+
+const getLevelColor = (level: string): string => {
+  const colors = {
+    error: 'bg-red-500/20 text-red-400',
+    warn: 'bg-yellow-500/20 text-yellow-400',
+    info: 'bg-blue-500/20 text-blue-400',
+    debug: 'bg-gray-500/20 text-gray-400'
+  };
+  return colors[level as keyof typeof colors] || colors.info;
+};
+
+const getPatternSeverityColor = (severity: string): string => {
+  const colors = {
+    high: 'bg-red-500/20 text-red-400',
+    medium: 'bg-yellow-500/20 text-yellow-400',
+    low: 'bg-green-500/20 text-green-400'
+  };
+  return colors[severity as keyof typeof colors] || colors.low;
+};
+
+const prevPage = () => {
+  if (currentPage.value > 1) {
+    currentPage.value--;
+  }
+};
+
+const nextPage = () => {
+  if (endIndex.value < totalLogs.value) {
+    currentPage.value++;
+  }
+};
+
+const fetchLogs = async () => {
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/logs?timeRange=${timeRange.value}&search=${searchQuery.value}&level=${selectedLevel.value}`
+    );
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch logs');
+    }
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      logs.value = data.data.logs;
+      patterns.value = data.data.patterns;
+    }
+  } catch (error) {
+    console.error('Error fetching logs:', error);
+    
+    // 开发环境下使用模拟数据
+    if (import.meta.env.DEV) {
+      generateMockData();
+    }
+  }
+};
+
+const generateMockData = () => {
+  // Generate mock logs
+  const services = ['api-gateway', 'auth-service', 'user-service', 'payment-service'];
+  const levels = ['error', 'warn', 'info', 'debug'];
+  const mockLogs: LogEntry[] = [];
+  
+  for (let i = 0; i < 50; i++) {
+    mockLogs.push({
+      id: `log-${i}`,
+      timestamp: new Date(Date.now() - Math.random() * 86400000).toISOString(),
+      level: levels[Math.floor(Math.random() * levels.length)] as LogEntry['level'],
+      service: services[Math.floor(Math.random() * services.length)],
+      message: `Sample log message ${i + 1} with some details about the operation.`
+    });
+  }
+  
+  logs.value = mockLogs;
+  
+  // Generate mock patterns
+  patterns.value = [
+    {
+      id: 'pattern-1',
+      name: 'Connection Timeout',
+      pattern: '.*Connection timed out.*',
+      severity: 'high',
+      occurrences: 15,
+      example: 'Connection timed out while connecting to database'
+    },
+    {
+      id: 'pattern-2',
+      name: 'Authentication Failed',
+      pattern: '.*Authentication failed.*',
+      severity: 'medium',
+      occurrences: 8,
+      example: 'Authentication failed for user admin'
+    },
+    {
+      id: 'pattern-3',
+      name: 'Cache Miss',
+      pattern: '.*Cache miss.*',
+      severity: 'low',
+      occurrences: 25,
+      example: 'Cache miss for key: user-profile-123'
+    }
+  ];
+};
+
+// Watch for changes
+watch([timeRange, selectedLevel], () => {
+  currentPage.value = 1;
+  fetchLogs();
+});
+
+// Initialize
+onMounted(() => {
+  fetchLogs();
+});
+
+// 状态
+const activeTab = ref('overview');
+const selectedAnomaly = ref<any>(null);
+const anomalyViewOpen = ref(false);
+
+// 模拟数据 - 实际应用中从API获取
+const logStats = ref({
+  totalLogs: 45896,
+  errorLogs: 328,
+  warningLogs: 1243,
+  infoLogs: 35621,
+  debugLogs: 8704,
+  totalServices: 12,
+  topErrorService: 'api-gateway',
+  avgResponseTime: '187ms',
+  p95ResponseTime: '486ms',
+  p99ResponseTime: '892ms',
+});
+
+const logTrends = ref([
+  { time: '00:00', errors: 10, warnings: 42, info: 786 },
+  { time: '01:00', errors: 8, warnings: 36, info: 823 },
+  { time: '02:00', errors: 5, warnings: 28, info: 765 },
+  { time: '03:00', errors: 3, warnings: 21, info: 698 },
+  { time: '04:00', errors: 6, warnings: 34, info: 712 },
+  { time: '05:00', errors: 15, warnings: 56, info: 742 },
+  { time: '06:00', errors: 24, warnings: 78, info: 812 },
+  { time: '07:00', errors: 32, warnings: 95, info: 954 },
+  { time: '08:00', errors: 45, warnings: 116, info: 1354 },
+  { time: '09:00', errors: 38, warnings: 102, info: 1576 },
+  { time: '10:00', errors: 29, warnings: 87, info: 1487 },
+  { time: '11:00', errors: 26, warnings: 92, info: 1385 },
+  { time: '12:00', errors: 28, warnings: 85, info: 1421 },
+  { time: '13:00', errors: 32, warnings: 94, info: 1532 },
+  { time: '14:00', errors: 37, warnings: 108, info: 1621 },
+  { time: '15:00', errors: 42, warnings: 113, info: 1587 },
+  { time: '16:00', errors: 35, warnings: 97, info: 1489 },
+  { time: '17:00', errors: 27, warnings: 85, info: 1345 },
+  { time: '18:00', errors: 22, warnings: 76, info: 1221 },
+  { time: '19:00', errors: 18, warnings: 65, info: 1132 },
+  { time: '20:00', errors: 16, warnings: 59, info: 985 },
+  { time: '21:00', errors: 12, warnings: 48, info: 865 },
+  { time: '22:00', errors: 9, warnings: 36, info: 754 },
+  { time: '23:00', errors: 7, warnings: 32, info: 687 },
+]);
+
+const detectedAnomalies = ref([
+  {
+    id: 'anomaly-1',
+    type: 'error_spike',
+    service: 'api-gateway',
+    startTime: '2023-11-20T09:15:00Z',
+    endTime: '2023-11-20T09:35:00Z',
+    severity: 'high',
+    description: 'Sudden spike in API gateway connection errors',
+    affectedEndpoints: ['/api/metrics', '/api/logs'],
+    rootCause: 'Possible backend service unavailability',
+    status: 'active',
+    similarIncidents: 2,
+  },
+  {
+    id: 'anomaly-2',
+    type: 'latency_increase',
+    service: 'database-service',
+    startTime: '2023-11-20T11:05:00Z',
+    endTime: '2023-11-20T11:45:00Z',
+    severity: 'medium',
+    description: 'Database query latency increased by 300%',
+    affectedEndpoints: ['user-queries', 'transaction-processing'],
+    rootCause: 'Slow database index performance',
+    status: 'investigating',
+    similarIncidents: 5,
+  },
+  {
+    id: 'anomaly-3',
+    type: 'error_pattern',
+    service: 'auth-service',
+    startTime: '2023-11-20T08:30:00Z',
+    endTime: '2023-11-20T08:50:00Z',
+    severity: 'low',
+    description: 'Authentication failures for specific user segment',
+    affectedEndpoints: ['/auth/login', '/auth/refresh'],
+    rootCause: 'Auth token configuration issue',
+    status: 'resolved',
+    similarIncidents: 1,
+  },
+]);
+
+const serviceErrorRates = ref([
+  { service: 'api-gateway', errorRate: 0.42, total: 12560 },
+  { service: 'user-service', errorRate: 0.18, total: 8732 },
+  { service: 'auth-service', errorRate: 0.21, total: 6543 },
+  { service: 'database-service', errorRate: 0.35, total: 5621 },
+  { service: 'notification-service', errorRate: 0.12, total: 3245 },
+  { service: 'payment-service', errorRate: 0.28, total: 2890 },
+]);
+
+// 查看异常详情
+const viewAnomaly = (anomaly: any) => {
+  selectedAnomaly.value = anomaly;
+  anomalyViewOpen.value = true;
+};
+
+// 获取异常状态样式
+const getStatusStyle = (status: string) => {
+  switch(status) {
+    case 'active':
+      return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200';
+    case 'investigating':
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200';
+    case 'resolved':
+      return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200';
+    default:
+      return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
+  }
+};
+
+// 获取严重程度样式
+const getSeverityStyle = (severity: string) => {
+  switch(severity) {
+    case 'high':
+      return 'text-red-600 dark:text-red-400';
+    case 'medium':
+      return 'text-yellow-600 dark:text-yellow-400';
+    case 'low':
+      return 'text-blue-600 dark:text-blue-400';
+    default:
+      return 'text-gray-600 dark:text-gray-400';
+  }
+};
+
+// 格式化时间
+const formatTime = (isoString: string) => {
+  return new Date(isoString).toLocaleString();
+};
+
+// 获取日志级别统计数据（用于饼图）
+const logLevelStats = computed(() => {
+  return [
+    { name: 'Error', value: logStats.value.errorLogs, color: '#ef4444' },
+    { name: 'Warning', value: logStats.value.warningLogs, color: '#f59e0b' },
+    { name: 'Info', value: logStats.value.infoLogs, color: '#3b82f6' },
+    { name: 'Debug', value: logStats.value.debugLogs, color: '#6b7280' },
+  ];
+});
+</script>
+459:<template>
+<template>
+  <div class="space-y-6">
+    <!-- 日志概览统计卡片 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <Card>
+        <CardHeader class="pb-2">
+          <CardTitle class="text-sm font-medium">总日志数</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-bold">{{ logStats.totalLogs.toLocaleString() }}</div>
+          <p class="text-xs text-gray-500 mt-1">过去 {{ timeRange }}</p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader class="pb-2">
+          <CardTitle class="text-sm font-medium">错误日志</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-bold text-red-600">{{ logStats.errorLogs.toLocaleString() }}</div>
+          <p class="text-xs text-gray-500 mt-1">{{ ((logStats.errorLogs / logStats.totalLogs) * 100).toFixed(2) }}% 的总日志</p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader class="pb-2">
+          <CardTitle class="text-sm font-medium">服务数量</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-bold">{{ logStats.totalServices }}</div>
+          <p class="text-xs text-gray-500 mt-1">最多错误: {{ logStats.topErrorService }}</p>
+        </CardContent>
+      </Card>
+      
+      <Card>
+        <CardHeader class="pb-2">
+          <CardTitle class="text-sm font-medium">平均响应时间</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div class="text-2xl font-bold">{{ logStats.avgResponseTime }}</div>
+          <p class="text-xs text-gray-500 mt-1">P95: {{ logStats.p95ResponseTime }} | P99: {{ logStats.p99ResponseTime }}</p>
+        </CardContent>
+      </Card>
+    </div>
+    
+    <!-- 日志分析标签页 -->
+    <Tabs v-model="activeTab" class="w-full">
+      <TabsList class="grid w-full grid-cols-3">
+        <TabsTrigger value="overview">概览</TabsTrigger>
+        <TabsTrigger value="errors">错误分析</TabsTrigger>
+        <TabsTrigger value="anomalies">异常检测</TabsTrigger>
+      </TabsList>
+      
+      <!-- 概览标签内容 -->
+      <TabsContent value="overview">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- 日志趋势图 -->
+          <Card>
+            <CardHeader>
+              <CardTitle>日志趋势</CardTitle>
+              <CardDescription>
+                过去24小时的日志数量趋势
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <!-- 在实际应用中，这里会使用图表库如 Chart.js 或 ECharts 等 -->
+              <div class="h-80 bg-gray-50 dark:bg-gray-800 rounded-md flex items-center justify-center">
+                <p class="text-gray-400">日志趋势图表将显示在这里</p>
+                <!-- 在实际应用中，这里会渲染真实的图表 -->
+              </div>
+            </CardContent>
+          </Card>
+          
+          <!-- 日志级别分布 -->
+          <Card>
+            <CardHeader>
+              <CardTitle>日志级别分布</CardTitle>
+              <CardDescription>
+                各级别日志的数量分布
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <!-- 在实际应用中，这里会使用饼图 -->
+              <div class="h-80 bg-gray-50 dark:bg-gray-800 rounded-md p-4">
+                <div class="space-y-4">
+                  <div v-for="stat in logLevelStats" :key="stat.name" class="flex items-center">
+                    <div class="w-3 h-3 rounded-full mr-2" :style="{ backgroundColor: stat.color }"></div>
+                    <div class="flex-1">{{ stat.name }}</div>
+                    <div class="font-medium">{{ stat.value.toLocaleString() }}</div>
+                    <div class="text-gray-500 text-sm ml-2">
+                      {{ ((stat.value / logStats.totalLogs) * 100).toFixed(1) }}%
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </TabsContent>
+      
+      <!-- 错误分析标签内容 -->
+      <TabsContent value="errors">
+        <Card>
+          <CardHeader>
+            <CardTitle>服务错误率</CardTitle>
+            <CardDescription>
+              各服务的错误率分析
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div class="space-y-6">
+              <!-- 服务错误率图表 -->
+              <div class="h-60 bg-gray-50 dark:bg-gray-800 rounded-md flex items-center justify-center mb-4">
+                <p class="text-gray-400">服务错误率图表将显示在这里</p>
+                <!-- 在实际应用中，这里会渲染真实的图表 -->
+              </div>
+              
+              <!-- 服务错误率表格 -->
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead>
+                    <tr class="border-b dark:border-gray-700">
+                      <th class="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">服务</th>
+                      <th class="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">总请求数</th>
+                      <th class="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">错误率</th>
+                      <th class="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">状态</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="item in serviceErrorRates" :key="item.service" class="border-b dark:border-gray-700">
+                      <td class="py-3 px-4 text-sm">{{ item.service }}</td>
+                      <td class="py-3 px-4 text-sm">{{ item.total.toLocaleString() }}</td>
+                      <td class="py-3 px-4 text-sm">
+                        <div class="flex items-center">
+                          <span 
+                            :class="{
+                              'text-red-600': item.errorRate > 0.3,
+                              'text-yellow-600': item.errorRate > 0.1 && item.errorRate <= 0.3,
+                              'text-green-600': item.errorRate <= 0.1
+                            }"
+                          >
+                            {{ (item.errorRate * 100).toFixed(2) }}%
+                          </span>
+                        </div>
+                      </td>
+                      <td class="py-3 px-4 text-sm">
+                        <span 
+                          class="px-2 py-1 text-xs font-semibold rounded"
+                          :class="{
+                            'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200': item.errorRate > 0.3,
+                            'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200': item.errorRate > 0.1 && item.errorRate <= 0.3,
+                            'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200': item.errorRate <= 0.1
+                          }"
+                        >
+                          {{ item.errorRate > 0.3 ? '异常' : (item.errorRate > 0.1 ? '警告' : '正常') }}
+                        </span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+      
+      <!-- 异常检测标签内容 -->
+      <TabsContent value="anomalies">
+        <Card>
+          <CardHeader>
+            <CardTitle>检测到的异常</CardTitle>
+            <CardDescription>
+              AI 分析发现的日志异常模式
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div class="space-y-6">
+              <!-- 异常列表 -->
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead>
+                    <tr class="border-b dark:border-gray-700">
+                      <th class="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">异常</th>
+                      <th class="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">服务</th>
+                      <th class="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">开始时间</th>
+                      <th class="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">严重程度</th>
+                      <th class="text-left py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">状态</th>
+                      <th class="text-right py-3 px-4 text-sm font-medium text-gray-500 dark:text-gray-400">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="anomaly in detectedAnomalies" :key="anomaly.id" class="border-b dark:border-gray-700">
+                      <td class="py-3 px-4 text-sm">
+                        <div class="font-medium">{{ anomaly.type }}</div>
+                        <div class="text-gray-500 text-xs">{{ anomaly.description }}</div>
+                      </td>
+                      <td class="py-3 px-4 text-sm">{{ anomaly.service }}</td>
+                      <td class="py-3 px-4 text-sm">{{ formatTime(anomaly.startTime) }}</td>
+                      <td class="py-3 px-4 text-sm">
+                        <span :class="getSeverityStyle(anomaly.severity)">
+                          {{ anomaly.severity }}
+                        </span>
+                      </td>
+                      <td class="py-3 px-4 text-sm">
+                        <span 
+                          class="px-2 py-1 text-xs font-semibold rounded"
+                          :class="getStatusStyle(anomaly.status)"
+                        >
+                          {{ anomaly.status }}
+                        </span>
+                      </td>
+                      <td class="py-3 px-4 text-sm text-right">
+                        <Button variant="ghost" size="sm" @click="viewAnomaly(anomaly)">
+                          查看
+                        </Button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
+    
+    <!-- 异常详情对话框 -->
+    <Dialog v-model:open="anomalyViewOpen">
+      <DialogContent class="sm:max-w-[600px]">
+        <DialogHeader v-if="selectedAnomaly">
+          <DialogTitle>
+            <div :class="getSeverityStyle(selectedAnomaly.severity)" class="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+              {{ selectedAnomaly.type }}
+            </div>
+          </DialogTitle>
+          <DialogDescription>
+            {{ selectedAnomaly.description }}
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div v-if="selectedAnomaly" class="space-y-4">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">服务</h4>
+              <p>{{ selectedAnomaly.service }}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">状态</h4>
+              <p>
+                <span 
+                  class="px-2 py-1 text-xs font-semibold rounded"
+                  :class="getStatusStyle(selectedAnomaly.status)"
+                >
+                  {{ selectedAnomaly.status }}
+                </span>
+              </p>
+            </div>
+            <div>
+              <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">开始时间</h4>
+              <p>{{ formatTime(selectedAnomaly.startTime) }}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">结束时间</h4>
+              <p>{{ formatTime(selectedAnomaly.endTime) }}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">可能的根本原因</h4>
+              <p>{{ selectedAnomaly.rootCause }}</p>
+            </div>
+            <div>
+              <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">类似事件</h4>
+              <p>{{ selectedAnomaly.similarIncidents }} 个历史事件</p>
+            </div>
+          </div>
+          
+          <div>
+            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400">受影响的端点</h4>
+            <ul class="mt-2 space-y-1">
+              <li v-for="(endpoint, index) in selectedAnomaly.affectedEndpoints" :key="index" class="text-sm">
+                {{ endpoint }}
+              </li>
+            </ul>
+          </div>
+          
+          <div class="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
+            <h4 class="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">建议操作</h4>
+            <ul class="space-y-1 list-disc list-inside text-sm">
+              <li>检查 {{ selectedAnomaly.service }} 服务的健康状态</li>
+              <li>查看相关的系统指标和告警</li>
+              <li>检查最近的部署或配置更改</li>
+              <li>查看历史类似问题的解决方案</li>
+            </ul>
+          </div>
+        </div>
+        
+        <DialogFooter>
+          <Button variant="outline" @click="anomalyViewOpen = false">关闭</Button>
+          <Button>创建事件</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  </div>
+</template> 

@@ -37,6 +37,16 @@ const routes = [
     component: () => import('../views/DataSourcesView.vue'),
   },
   {
+    path: '/business-metrics',
+    name: 'BusinessMetrics',
+    component: () => import('../views/BusinessMetricsView.vue'),
+  },
+  {
+    path: '/dashboards',
+    name: 'Dashboards',
+    component: () => import('../views/DashboardsView.vue'),
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: () => import('../views/SettingsView.vue'),
