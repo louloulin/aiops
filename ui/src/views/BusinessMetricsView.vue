@@ -9,11 +9,11 @@ const activeTab = ref<'dashboard' | 'definitions'>('dashboard');
 <template>
   <div class="space-y-6 p-6">
     <div class="flex justify-between items-center">
-      <h1 class="text-2xl font-semibold text-white">业务指标监控</h1>
+      <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">业务指标监控</h1>
       <div class="flex gap-4">
         <button
           @click="activeTab = 'definitions'"
-          class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg flex items-center gap-2"
+          class="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-300 dark:hover:bg-gray-600 rounded-lg flex items-center gap-2"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path d="M5 4a1 1 0 00-2 0v7.268a2 2 0 000 3.464V16a1 1 0 102 0v-1.268a2 2 0 000-3.464V4zM11 4a1 1 0 10-2 0v1.268a2 2 0 000 3.464V16a1 1 0 102 0V8.732a2 2 0 000-3.464V4zM16 3a1 1 0 011 1v7.268a2 2 0 010 3.464V16a1 1 0 11-2 0v-1.268a2 2 0 010-3.464V4a1 1 0 011-1z" />
@@ -30,15 +30,15 @@ const activeTab = ref<'dashboard' | 'definitions'>('dashboard');
     </div>
 
     <!-- Tab Navigation -->
-    <div class="border-b border-gray-700">
+    <div class="border-b border-gray-200 dark:border-gray-700">
       <nav class="-mb-px flex space-x-8" aria-label="Tabs">
         <button
           @click="activeTab = 'dashboard'"
           :class="[
             'py-4 px-1 border-b-2 font-medium text-sm',
             activeTab === 'dashboard'
-              ? 'border-blue-500 text-blue-500'
-              : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-500'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
           ]"
         >
           仪表盘
@@ -48,8 +48,8 @@ const activeTab = ref<'dashboard' | 'definitions'>('dashboard');
           :class="[
             'py-4 px-1 border-b-2 font-medium text-sm',
             activeTab === 'definitions'
-              ? 'border-blue-500 text-blue-500'
-              : 'border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-300'
+              ? 'border-blue-500 text-blue-600 dark:text-blue-500'
+              : 'border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300'
           ]"
         >
           指标定义

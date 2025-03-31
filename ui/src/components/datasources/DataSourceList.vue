@@ -98,13 +98,26 @@ const getTypeIcon = (type: string) => {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'connected':
-      return 'bg-green-500';
+      return 'bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200';
     case 'error':
-      return 'bg-red-500';
+      return 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200';
     case 'pending':
-      return 'bg-yellow-500';
+      return 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200';
     default:
-      return 'bg-gray-500';
+      return 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300';
+  }
+};
+
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'connected':
+      return 'Connected';
+    case 'error':
+      return 'Error';
+    case 'pending':
+      return 'Pending';
+    default:
+      return 'Unknown';
   }
 };
 
@@ -132,12 +145,12 @@ onMounted(() => {
         <div class="relative w-full">
           <input
             type="text"
-            placeholder="Search data sources..."
+            placeholder="搜索数据源..."
             v-model="searchQuery"
-            class="w-full bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10"
+            class="w-full bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 pl-10"
           />
           <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-500 dark:text-gray-400" viewBox="0 0 20 20" fill="currentColor">
               <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
             </svg>
           </div>
@@ -147,15 +160,15 @@ onMounted(() => {
       <div class="flex gap-4">
         <select
           v-model="selectedType"
-          class="bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="all">All Types</option>
+          <option value="all">全部类型</option>
           <option value="prometheus">Prometheus</option>
           <option value="grafana">Grafana</option>
           <option value="elasticsearch">Elasticsearch</option>
           <option value="cloudwatch">CloudWatch</option>
-          <option value="database">Database</option>
-          <option value="custom">Custom</option>
+          <option value="database">数据库</option>
+          <option value="custom">自定义</option>
         </select>
         
         <button
@@ -165,79 +178,79 @@ onMounted(() => {
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
             <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
           </svg>
-          Add Data Source
+          添加数据源
         </button>
       </div>
     </div>
     
     <!-- Data Source Table -->
-    <div class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+    <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-700">
-          <thead class="bg-gray-700">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Data Source
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                数据源
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Type
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                类型
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Status
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                状态
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Last Sync
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                最后同步
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Metrics
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                指标数量
               </th>
-              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Actions
+              <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                操作
               </th>
             </tr>
           </thead>
-          <tbody v-if="!loading" class="bg-gray-800 divide-y divide-gray-700">
-            <tr v-for="source in filteredDataSources" :key="source.id" class="hover:bg-gray-750">
+          <tbody v-if="!loading" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+            <tr v-for="source in filteredDataSources" :key="source.id" class="hover:bg-gray-50 dark:hover:bg-gray-750">
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-center">
-                  <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-gray-700 rounded-full">
-                    <svg class="h-6 w-6 text-blue-400" viewBox="0 0 24 24" fill="currentColor">
+                  <div class="flex-shrink-0 h-10 w-10 flex items-center justify-center bg-gray-100 dark:bg-gray-700 rounded-full">
+                    <svg class="h-6 w-6 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="currentColor">
                       <path :d="getTypeIcon(source.type)" />
                     </svg>
                   </div>
                   <div class="ml-4">
-                    <div class="text-sm font-medium text-white">{{ source.name }}</div>
-                    <div class="text-sm text-gray-400">{{ source.description }}</div>
+                    <div class="text-sm font-medium text-gray-900 dark:text-white">{{ source.name }}</div>
+                    <div class="text-sm text-gray-500 dark:text-gray-400">{{ source.description }}</div>
                   </div>
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-white capitalize">{{ source.type }}</div>
+                <div class="text-sm text-gray-900 dark:text-white capitalize">{{ source.type }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getStatusColor(source.status)">
-                  {{ source.status.charAt(0).toUpperCase() + source.status.slice(1) }}
+                  {{ getStatusText(source.status) }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                 {{ formatDate(source.lastSync) }}
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-300">
                 {{ source.metrics.toLocaleString() }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex justify-end space-x-2">
-                  <button class="text-blue-400 hover:text-blue-300">
+                  <button class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                     </svg>
                   </button>
-                  <button class="text-green-400 hover:text-green-300">
+                  <button class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
                     </svg>
                   </button>
-                  <button class="text-red-400 hover:text-red-300">
+                  <button class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                     </svg>
@@ -248,30 +261,17 @@ onMounted(() => {
           </tbody>
           <tbody v-else>
             <tr>
-              <td colspan="6" class="px-6 py-4 text-center text-white">
-                <div class="flex justify-center items-center space-x-2">
-                  <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                  <span>Loading data sources...</span>
+              <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                <div class="animate-pulse flex justify-center items-center space-x-4">
+                  <div class="h-3 bg-gray-200 dark:bg-gray-700 rounded w-3/4 max-w-md"></div>
                 </div>
               </td>
             </tr>
           </tbody>
-          <!-- Empty State -->
           <tbody v-if="!loading && filteredDataSources.length === 0">
             <tr>
-              <td colspan="6" class="px-6 py-10 text-center text-white">
-                <div class="flex flex-col items-center justify-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-gray-500 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
-                  </svg>
-                  <p class="text-gray-400 mb-2">No data sources found</p>
-                  <button
-                    @click="openAddModal"
-                    class="mt-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg px-4 py-2 text-sm"
-                  >
-                    Add your first data source
-                  </button>
-                </div>
+              <td colspan="6" class="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+                没有找到匹配的数据源
               </td>
             </tr>
           </tbody>

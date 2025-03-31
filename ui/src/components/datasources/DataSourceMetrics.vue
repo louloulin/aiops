@@ -139,13 +139,13 @@ const formatValue = (value: number, unit: string) => {
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'normal':
-      return 'bg-green-500';
+      return 'bg-green-100 dark:bg-green-500 text-green-800 dark:text-green-50';
     case 'warning':
-      return 'bg-yellow-500';
+      return 'bg-yellow-100 dark:bg-yellow-500 text-yellow-800 dark:text-yellow-50';
     case 'critical':
-      return 'bg-red-500';
+      return 'bg-red-100 dark:bg-red-500 text-red-800 dark:text-red-50';
     default:
-      return 'bg-gray-500';
+      return 'bg-gray-100 dark:bg-gray-500 text-gray-800 dark:text-gray-50';
   }
 };
 
@@ -167,13 +167,13 @@ onMounted(() => {
     <div class="flex flex-col md:flex-row justify-between items-center gap-4">
       <div class="flex items-center space-x-4">
         <div>
-          <label for="source-select" class="block text-sm font-medium text-gray-400 mb-1">Data Source</label>
+          <label for="source-select" class="block text-sm font-medium text-gray-700 dark:text-gray-400 mb-1">数据源</label>
           <select
             id="source-select"
             v-model="selectedSource"
-            class="bg-gray-800 border border-gray-700 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="all">All Sources</option>
+            <option value="all">所有数据源</option>
             <option v-for="source in sources" :key="source" :value="source">{{ source }}</option>
           </select>
         </div>
@@ -184,7 +184,7 @@ onMounted(() => {
           @click="metricView = 'grid'"
           :class="[
             'p-2 rounded-lg focus:outline-none',
-            metricView === 'grid' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'
+            metricView === 'grid' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
           ]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -195,7 +195,7 @@ onMounted(() => {
           @click="metricView = 'list'"
           :class="[
             'p-2 rounded-lg focus:outline-none',
-            metricView === 'list' ? 'bg-gray-700 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-700'
+            metricView === 'list' ? 'bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
           ]"
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -210,12 +210,12 @@ onMounted(() => {
       <div
         v-for="(data, metricName) in groupedMetrics"
         :key="metricName"
-        class="bg-gray-800 border border-gray-700 rounded-lg p-4"
+        class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm"
       >
         <div class="flex justify-between items-start mb-4">
           <div>
-            <h3 class="text-lg font-medium text-white">{{ metricName }}</h3>
-            <p class="text-sm text-gray-400">From {{ data.sources.join(', ') }}</p>
+            <h3 class="text-lg font-medium text-gray-900 dark:text-white">{{ metricName }}</h3>
+            <p class="text-sm text-gray-500 dark:text-gray-400">From {{ data.sources.join(', ') }}</p>
           </div>
           <span
             v-if="data.metrics.length > 0"
@@ -230,7 +230,7 @@ onMounted(() => {
           <div
             v-for="(value, index) in data.metrics[0]?.trend || []"
             :key="index"
-            class="w-full bg-blue-500 rounded-sm"
+            class="w-full bg-blue-600 dark:bg-blue-500 rounded-sm"
             :style="{ 
               height: `${(value / Math.max(...(data.metrics[0]?.trend || [1]))) * 100}%`,
               opacity: 0.3 + (0.7 * (index / (data.metrics[0]?.trend?.length || 1)))
@@ -240,14 +240,14 @@ onMounted(() => {
         
         <div class="mt-4">
           <div class="flex justify-between">
-            <span class="text-gray-400 text-sm">Current Value</span>
-            <span class="text-white font-medium">
+            <span class="text-gray-500 dark:text-gray-400 text-sm">当前值</span>
+            <span class="text-gray-900 dark:text-white font-medium">
               {{ data.metrics[0] ? formatValue(data.metrics[0].value, data.metrics[0].unit) : 'N/A' }}
             </span>
           </div>
           <div class="flex justify-between mt-1">
-            <span class="text-gray-400 text-sm">Last Update</span>
-            <span class="text-gray-300 text-sm">
+            <span class="text-gray-500 dark:text-gray-400 text-sm">最后更新</span>
+            <span class="text-gray-700 dark:text-gray-300 text-sm">
               {{ data.metrics[0] ? formatTimestamp(data.metrics[0].timestamp) : 'N/A' }}
             </span>
           </div>
@@ -256,42 +256,42 @@ onMounted(() => {
     </div>
     
     <!-- List View -->
-    <div v-else class="bg-gray-800 border border-gray-700 rounded-lg overflow-hidden">
+    <div v-else class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden shadow-sm">
       <div class="overflow-x-auto">
-        <table class="min-w-full divide-y divide-gray-700">
-          <thead class="bg-gray-700">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+          <thead class="bg-gray-50 dark:bg-gray-700">
             <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Metric Name
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                指标名称
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Source
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                数据源
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Value
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                数值
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Status
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                状态
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Last Update
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                最后更新
               </th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
-                Trend
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                趋势
               </th>
             </tr>
           </thead>
-          <tbody class="bg-gray-800 divide-y divide-gray-700">
+          <tbody class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
             <template v-for="sourceData in filteredMetrics" :key="sourceData.sourceId">
-              <tr v-for="metric in sourceData.metrics" :key="`${sourceData.sourceId}-${metric.id}`" class="hover:bg-gray-750">
+              <tr v-for="metric in sourceData.metrics" :key="`${sourceData.sourceId}-${metric.id}`" class="hover:bg-gray-50 dark:hover:bg-gray-750">
                 <td class="px-6 py-4">
-                  <div class="text-sm font-medium text-white">{{ metric.name }}</div>
+                  <div class="text-sm font-medium text-gray-900 dark:text-white">{{ metric.name }}</div>
                 </td>
                 <td class="px-6 py-4">
-                  <div class="text-sm text-gray-300">{{ sourceData.sourceName }}</div>
+                  <div class="text-sm text-gray-700 dark:text-gray-300">{{ sourceData.sourceName }}</div>
                 </td>
                 <td class="px-6 py-4">
-                  <div class="text-sm text-white">{{ formatValue(metric.value, metric.unit) }}</div>
+                  <div class="text-sm text-gray-900 dark:text-white">{{ formatValue(metric.value, metric.unit) }}</div>
                 </td>
                 <td class="px-6 py-4">
                   <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full" :class="getStatusColor(metric.status)">
@@ -299,14 +299,14 @@ onMounted(() => {
                   </span>
                 </td>
                 <td class="px-6 py-4">
-                  <div class="text-sm text-gray-300">{{ formatTimestamp(metric.timestamp) }}</div>
+                  <div class="text-sm text-gray-700 dark:text-gray-300">{{ formatTimestamp(metric.timestamp) }}</div>
                 </td>
                 <td class="px-6 py-4">
                   <div class="flex items-end h-6 space-x-1">
                     <div
                       v-for="(value, index) in metric.trend"
                       :key="index"
-                      class="w-2 bg-blue-500 rounded-sm"
+                      class="w-2 bg-blue-600 dark:bg-blue-500 rounded-sm"
                       :style="{ 
                         height: `${(value / Math.max(...metric.trend)) * 100}%`,
                         opacity: 0.3 + (0.7 * (index / metric.trend.length))
@@ -322,8 +322,8 @@ onMounted(() => {
     </div>
     
     <!-- Loading State -->
-    <div v-if="loading" class="absolute inset-0 bg-gray-900/50 flex items-center justify-center">
-      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+    <div v-if="loading" class="absolute inset-0 bg-white/50 dark:bg-gray-900/50 flex items-center justify-center">
+      <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 dark:border-white"></div>
     </div>
   </div>
 </template> 
