@@ -32,6 +32,11 @@ const routes = [
     component: () => import('../views/AutoHealView.vue'),
   },
   {
+    path: '/datasources',
+    name: 'DataSources',
+    component: () => import('../views/DataSourcesView.vue'),
+  },
+  {
     path: '/settings',
     name: 'Settings',
     component: () => import('../views/SettingsView.vue'),
