@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { z } from 'zod';
 import { pgVector } from '../config/database';
-import { MDocument } from '@mastra/rag';
+import { MDocument } from '../utils/mastraComponents';
 
 const app = new Hono();
 

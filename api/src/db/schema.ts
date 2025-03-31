@@ -75,6 +75,37 @@ export const repairLogs = pgTable('repair_logs', {
   completedAt: timestamp('completed_at'), // 完成时间
 });
 
+/**
+ * 业务指标表
+ * 存储自定义的业务指标定义
+ */
+export const businessMetrics = pgTable('business_metrics', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 100 }).notNull(), // 指标名称
+  description: text('description'), // 指标描述
+  category: varchar('category', { length: 50 }).notNull(), // 指标类别: user, performance, business, quality, custom
+  query: text('query').notNull(), // 查询表达式
+  dataSource: varchar('data_source', { length: 100 }).notNull(), // 数据源
+  warningThreshold: doublePrecision('warning_threshold'), // 警告阈值
+  criticalThreshold: doublePrecision('critical_threshold'), // 严重阈值
+  unit: varchar('unit', { length: 20 }), // 单位
+  aggregation: varchar('aggregation', { length: 20 }).notNull(), // 聚合方式: avg, sum, min, max, count
+  createdAt: timestamp('created_at').defaultNow(), // 创建时间
+  updatedAt: timestamp('updated_at').defaultNow(), // 更新时间
+  status: varchar('status', { length: 20 }).default('active').notNull(), // 状态: active, inactive, draft
+});
+
+/**
+ * 业务指标数据表
+ * 存储业务指标的历史数据
+ */
+export const businessMetricsData = pgTable('business_metrics_data', {
+  id: serial('id').primaryKey(),
+  metricId: integer('metric_id').notNull(), // 关联的业务指标ID
+  value: doublePrecision('value').notNull(), // 指标值
+  timestamp: timestamp('timestamp').defaultNow(), // 时间戳
+});
+
 // 导出类型，用于类型安全的查询
 export type SystemMetric = typeof systemMetrics.$inferSelect;
 export type NewSystemMetric = typeof systemMetrics.$inferInsert;
@@ -89,4 +120,10 @@ export type Config = typeof configs.$inferSelect;
 export type NewConfig = typeof configs.$inferInsert;
 
 export type RepairLog = typeof repairLogs.$inferSelect;
-export type NewRepairLog = typeof repairLogs.$inferInsert; 
+export type NewRepairLog = typeof repairLogs.$inferInsert;
+
+export type BusinessMetric = typeof businessMetrics.$inferSelect;
+export type NewBusinessMetric = typeof businessMetrics.$inferInsert;
+
+export type BusinessMetricData = typeof businessMetricsData.$inferSelect;
+export type NewBusinessMetricData = typeof businessMetricsData.$inferInsert; 

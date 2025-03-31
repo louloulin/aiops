@@ -1,5 +1,5 @@
 import { Pool } from 'pg';
-import { PgVector } from '@mastra/pg';
+import { PgVector } from '../utils/mastraComponents';
 
 // Create PostgreSQL connection pool
 export const pool = new Pool({

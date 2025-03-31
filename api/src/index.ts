@@ -1,3 +1,12 @@
+// Filter out LlamaIndex warnings
+const originalConsoleLog = console.log;
+console.log = function(...args) {
+  if (args.length && typeof args[0] === 'string' && args[0].includes('llamaindex was already imported')) {
+    return; // Suppress LlamaIndex warnings
+  }
+  originalConsoleLog.apply(console, args);
+};
+
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { logger } from 'hono/logger';
@@ -9,6 +18,7 @@ import { logsRoutes } from './routes/logs';
 import { deployRoutes } from './routes/deploy';
 import { autohealRoutes } from './routes/autoheal';
 import { knowledgeRoutes } from './routes/knowledge';
+import businessMetricsRoutes from './routes/business-metrics';
 import { monitoringAgent } from './agents/monitoringAgent';
 import { logAnalysisAgent } from './agents/logAnalysisAgent';
 import { autoHealingAgent } from './agents/autoHealingAgent';
@@ -44,6 +54,7 @@ app.route('/api/logs', logsRoutes);
 app.route('/api/deploy', deployRoutes);
 app.route('/api/autoheal', autohealRoutes);
 app.route('/api/knowledge', knowledgeRoutes);
+app.route('/api/business-metrics', businessMetricsRoutes);
 
 // 添加数据库路由
 app.get('/api/health', async (c) => {

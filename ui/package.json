@@ -14,6 +14,7 @@
   "dependencies": {
     "@types/vis": "4.21.27",
     "axios": "^1.8.4",
+    "echarts": "5.6.0",
     "pinia": "^3.0.1",
     "vis-data": "7.1.9",
     "vis-network": "9.1.9",

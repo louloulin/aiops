@@ -1,4 +1,40 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import AppLayout from '@/layouts/AppLayout.vue';
+
+// 业务指标相关路由
+const businessMetricsRoutes = [
+  {
+    path: 'business-metrics',
+    name: 'BusinessMetrics',
+    component: () => import('@/views/business/BusinessMetricsView.vue'),
+    meta: {
+      title: '业务指标',
+      icon: 'chart-line',
+      requiresAuth: true,
+    },
+  },
+  {
+    path: 'business-metrics/:id',
+    name: 'BusinessMetricDetails',
+    component: () => import('@/views/business/BusinessMetricDetailsView.vue'),
+    props: true,
+    meta: {
+      title: '指标详情',
+      hideInMenu: true,
+      requiresAuth: true,
+    },
+  },
+  {
+    path: 'business-metrics-dashboard',
+    name: 'BusinessMetricsDashboard',
+    component: () => import('@/views/business/BusinessMetricsDashboardView.vue'),
+    meta: {
+      title: '业务指标仪表盘',
+      icon: 'chart-bar',
+      requiresAuth: true,
+    },
+  },
+];
 
 const routes = [
   {
@@ -42,6 +78,11 @@ const routes = [
     component: () => import('../views/BusinessMetricsView.vue'),
   },
   {
+    path: '/business-metrics/:id',
+    name: 'BusinessMetricDetails',
+    component: () => import('../components/business/BusinessMetricDetails.vue'),
+  },
+  {
     path: '/dashboards',
     name: 'Dashboards',
     component: () => import('../views/DashboardsView.vue'),
@@ -50,6 +91,15 @@ const routes = [
     path: '/settings',
     name: 'Settings',
     component: () => import('../views/SettingsView.vue'),
+  },
+  {
+    path: '/',
+    component: AppLayout,
+    redirect: '/dashboard',
+    children: [
+      // 添加业务指标路由
+      ...businessMetricsRoutes,
+    ]
   },
 ];
 

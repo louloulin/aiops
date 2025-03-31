@@ -1,21 +1,21 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { businessMetricsApi } from '@/services/api';
 
 interface BusinessMetric {
-  id: string;
+  id: number;
   name: string;
-  description: string;
+  description: string | null;
   category: 'user' | 'performance' | 'business' | 'quality' | 'custom';
   query: string;
   dataSource: string;
-  thresholds: {
-    warning: number | null;
-    critical: number | null;
-  };
-  unit: string;
+  warningThreshold: number | null;
+  criticalThreshold: number | null;
+  unit: string | null;
   aggregation: 'avg' | 'sum' | 'min' | 'max' | 'count';
-  created: Date;
-  updated: Date;
+  createdAt: string;
+  updatedAt: string;
   status: 'active' | 'inactive' | 'draft';
 }
 
@@ -26,15 +26,15 @@ const searchQuery = ref('');
 const selectedCategory = ref<string>('all');
 const showAddModal = ref(false);
 const editingMetric = ref<BusinessMetric | null>(null);
-
-// API基础URL
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9700/api';
+const isNewMetric = ref(false);
+const router = useRouter();
 
 // Computed
 const filteredMetrics = computed(() => {
   return metrics.value.filter(metric => {
-    const matchesSearch = metric.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
-                         metric.description.toLowerCase().includes(searchQuery.value.toLowerCase());
+    const matchesSearch = 
+      metric.name.toLowerCase().includes(searchQuery.value.toLowerCase()) || 
+      (metric.description && metric.description.toLowerCase().includes(searchQuery.value.toLowerCase()));
     const matchesCategory = selectedCategory.value === 'all' || metric.category === selectedCategory.value;
     
     return matchesSearch && matchesCategory;
@@ -61,7 +61,7 @@ const metricCategory = computed({
 });
 
 const metricDescription = computed({
-  get: () => editingMetric.value ? editingMetric.value.description : '',
+  get: () => editingMetric.value ? editingMetric.value.description || '' : '',
   set: (val) => {
     if (editingMetric.value) {
       editingMetric.value.description = val;
@@ -97,7 +97,7 @@ const metricQuery = computed({
 });
 
 const metricUnit = computed({
-  get: () => editingMetric.value ? editingMetric.value.unit : '',
+  get: () => editingMetric.value ? editingMetric.value.unit || '' : '',
   set: (val) => {
     if (editingMetric.value) {
       editingMetric.value.unit = val;
@@ -106,19 +106,19 @@ const metricUnit = computed({
 });
 
 const metricWarningThreshold = computed({
-  get: () => editingMetric.value && editingMetric.value.thresholds ? editingMetric.value.thresholds.warning : null,
-  set: (val) => {
-    if (editingMetric.value && editingMetric.value.thresholds) {
-      editingMetric.value.thresholds.warning = val;
+  get: () => editingMetric.value ? editingMetric.value.warningThreshold : null,
+  set: (val: string | number | null) => {
+    if (editingMetric.value) {
+      editingMetric.value.warningThreshold = val !== '' && val !== null ? Number(val) : null;
     }
   }
 });
 
 const metricCriticalThreshold = computed({
-  get: () => editingMetric.value && editingMetric.value.thresholds ? editingMetric.value.thresholds.critical : null,
-  set: (val) => {
-    if (editingMetric.value && editingMetric.value.thresholds) {
-      editingMetric.value.thresholds.critical = val;
+  get: () => editingMetric.value ? editingMetric.value.criticalThreshold : null,
+  set: (val: string | number | null) => {
+    if (editingMetric.value) {
+      editingMetric.value.criticalThreshold = val !== '' && val !== null ? Number(val) : null;
     }
   }
 });
@@ -136,15 +136,12 @@ const metricStatus = computed({
 const fetchMetrics = async () => {
   try {
     loading.value = true;
-    const response = await fetch(`${API_BASE_URL}/business/metrics/definitions`);
+    const response = await businessMetricsApi.getMetrics();
     
-    if (!response.ok) {
-      throw new Error('Failed to fetch business metrics');
-    }
-
-    const data = await response.json();
-    if (data.success) {
-      metrics.value = data.metrics;
+    if (response.success) {
+      metrics.value = response.metrics;
+    } else {
+      alert(response.message || '获取业务指标失败');
     }
   } catch (error) {
     console.error('Error fetching business metrics:', error);
@@ -184,26 +181,24 @@ const generateMockData = () => {
     const dataSource = dataSources[Math.floor(Math.random() * dataSources.length)];
     
     return {
-      id: `bm-${i + 1}`,
+      id: i + 1,
       name: template.name,
       description: `${template.name}的监控指标，用于衡量系统的${category}表现`,
       category,
       query: template.query,
       dataSource,
-      thresholds: {
-        warning: Math.random() > 0.2 ? Math.floor(Math.random() * 90) + 10 : null,
-        critical: Math.random() > 0.2 ? Math.floor(Math.random() * 90) + 10 : null
-      },
+      warningThreshold: Math.random() > 0.2 ? Math.floor(Math.random() * 90) + 10 : null,
+      criticalThreshold: Math.random() > 0.2 ? Math.floor(Math.random() * 90) + 10 : null,
       unit,
       aggregation,
-      created: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000),
-      updated: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(Date.now() - Math.random() * 90 * 24 * 60 * 60 * 1000).toISOString(),
+      updatedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
       status
     };
   });
 };
 
-const formatDate = (date: Date) => {
+const formatDate = (date: string) => {
   return new Date(date).toLocaleString();
 };
 
@@ -239,11 +234,27 @@ const getStatusColor = (status: string) => {
 };
 
 const openAddModal = () => {
-  editingMetric.value = null;
+  isNewMetric.value = true;
+  editingMetric.value = {
+    id: 0,
+    name: '',
+    description: '',
+    category: 'business',
+    query: '',
+    dataSource: '',
+    warningThreshold: null,
+    criticalThreshold: null,
+    unit: '',
+    aggregation: 'avg',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    status: 'draft'
+  };
   showAddModal.value = true;
 };
 
 const openEditModal = (metric: BusinessMetric) => {
+  isNewMetric.value = false;
   editingMetric.value = { ...metric };
   showAddModal.value = true;
 };
@@ -253,13 +264,104 @@ const closeModal = () => {
   editingMetric.value = null;
 };
 
-const saveMetric = () => {
-  // TODO: Implement API call to save metric
-  console.log('Saving metric:', editingMetric.value);
-  closeModal();
+const saveMetric = async () => {
+  if (!editingMetric.value) return;
+  
+  // 表单验证
+  if (!editingMetric.value.name) {
+    alert('指标名称不能为空');
+    return;
+  }
+  if (!editingMetric.value.query) {
+    alert('查询表达式不能为空');
+    return;
+  }
+  if (!editingMetric.value.dataSource) {
+    alert('数据源不能为空');
+    return;
+  }
+
+  try {
+    let response;
+    
+    if (isNewMetric.value) {
+      // 创建新指标
+      response = await businessMetricsApi.createMetric({
+        name: editingMetric.value.name,
+        description: editingMetric.value.description,
+        category: editingMetric.value.category,
+        query: editingMetric.value.query,
+        dataSource: editingMetric.value.dataSource,
+        warningThreshold: editingMetric.value.warningThreshold,
+        criticalThreshold: editingMetric.value.criticalThreshold,
+        unit: editingMetric.value.unit,
+        aggregation: editingMetric.value.aggregation,
+        status: editingMetric.value.status,
+      });
+      
+      if (response.success) {
+        alert('业务指标创建成功');
+      } else {
+        alert(response.message || '创建业务指标失败');
+        return;
+      }
+    } else {
+      // 更新指标
+      const id = editingMetric.value.id;
+      response = await businessMetricsApi.updateMetric(id, {
+        name: editingMetric.value.name,
+        description: editingMetric.value.description,
+        category: editingMetric.value.category,
+        query: editingMetric.value.query,
+        dataSource: editingMetric.value.dataSource,
+        warningThreshold: editingMetric.value.warningThreshold,
+        criticalThreshold: editingMetric.value.criticalThreshold,
+        unit: editingMetric.value.unit,
+        aggregation: editingMetric.value.aggregation,
+        status: editingMetric.value.status,
+      });
+      
+      if (response.success) {
+        alert('业务指标更新成功');
+      } else {
+        alert(response.message || '更新业务指标失败');
+        return;
+      }
+    }
+    
+    // 刷新指标列表
+    fetchMetrics();
+    closeModal();
+  } catch (error) {
+    console.error('保存业务指标时出错:', error);
+    alert('保存业务指标失败');
+  }
 };
 
-// Initialize
+const deleteMetric = async (metric: BusinessMetric) => {
+  try {
+    if (confirm(`确定要删除业务指标 "${metric.name}" 吗？此操作不可逆。`)) {
+      const response = await businessMetricsApi.deleteMetric(metric.id);
+      
+      if (response.success) {
+        alert('业务指标删除成功');
+        fetchMetrics();
+      } else {
+        alert(response.message || '删除业务指标失败');
+      }
+    }
+  } catch (error) {
+    console.error('删除业务指标时出错:', error);
+    alert('删除业务指标失败');
+  }
+};
+
+// 查看指标详情
+const viewMetricDetails = (metric: BusinessMetric) => {
+  router.push(`/business-metrics/${metric.id}`);
+};
+
+// 在组件挂载时加载数据
 onMounted(() => {
   fetchMetrics();
 });
@@ -337,7 +439,12 @@ onMounted(() => {
             </tr>
           </thead>
           <tbody v-if="!loading" class="bg-gray-800 divide-y divide-gray-700">
-            <tr v-for="metric in filteredMetrics" :key="metric.id" class="hover:bg-gray-750">
+            <tr 
+              v-for="metric in filteredMetrics" 
+              :key="metric.id" 
+              class="hover:bg-gray-750 cursor-pointer"
+              @click="viewMetricDetails(metric)"
+            >
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex items-start flex-col">
                   <div class="text-sm font-medium text-white">{{ metric.name }}</div>
@@ -360,19 +467,19 @@ onMounted(() => {
                   {{ metric.status === 'active' ? '激活' : metric.status === 'draft' ? '草稿' : '停用' }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium" @click.stop>
                 <div class="flex justify-end space-x-2">
-                  <button @click="openEditModal(metric)" class="text-blue-400 hover:text-blue-300">
+                  <button @click.stop="openEditModal(metric)" class="text-blue-400 hover:text-blue-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                     </svg>
                   </button>
-                  <button class="text-green-400 hover:text-green-300">
+                  <button @click.stop="viewMetricDetails(metric)" class="text-green-400 hover:text-green-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M6 2a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V7.414A2 2 0 0015.414 6L12 2.586A2 2 0 0010.586 2H6zm5 6a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V8z" clip-rule="evenodd" />
                     </svg>
                   </button>
-                  <button class="text-red-400 hover:text-red-300">
+                  <button @click.stop="deleteMetric(metric)" class="text-red-400 hover:text-red-300">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                     </svg>
