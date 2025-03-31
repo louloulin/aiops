@@ -1,32 +1,21 @@
 <template>
-  <div class="container mx-auto px-4 py-8">
-    <h1 class="text-2xl font-bold mb-6 text-white">Knowledge Base</h1>
-    <div class="bg-[#232323] rounded-lg p-6">
-      <p class="text-gray-300 mb-4">This is the Knowledge Base section where you can manage and access your operational knowledge.</p>
-      
-      <!-- Placeholder content -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-        <div class="bg-[#2e2e2e] p-4 rounded-lg">
-          <h3 class="text-[#3ecf8e] font-medium mb-2">Documentation</h3>
-          <p class="text-gray-400 text-sm">System architecture and operations documentation</p>
-        </div>
-        <div class="bg-[#2e2e2e] p-4 rounded-lg">
-          <h3 class="text-[#3ecf8e] font-medium mb-2">Troubleshooting Guides</h3>
-          <p class="text-gray-400 text-sm">Common issues and their solutions</p>
-        </div>
-        <div class="bg-[#2e2e2e] p-4 rounded-lg">
-          <h3 class="text-[#3ecf8e] font-medium mb-2">Runbooks</h3>
-          <p class="text-gray-400 text-sm">Step-by-step operational procedures</p>
-        </div>
-        <div class="bg-[#2e2e2e] p-4 rounded-lg">
-          <h3 class="text-[#3ecf8e] font-medium mb-2">FAQs</h3>
-          <p class="text-gray-400 text-sm">Frequently asked questions and answers</p>
-        </div>
+  <div class="container mx-auto px-4 py-6">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-3xl font-bold text-white">Knowledge Graph</h1>
+      <div class="flex items-center gap-4">
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+          Add Knowledge
+        </button>
+        <button class="px-4 py-2 bg-gray-700 text-white rounded-md hover:bg-gray-600 transition-colors">
+          Import Data
+        </button>
       </div>
     </div>
+    
+    <KnowledgeGraph />
   </div>
 </template>
 
 <script setup lang="ts">
-// Knowledge Base view component
+import KnowledgeGraph from '../components/knowledge/KnowledgeGraph.vue';
 </script> 

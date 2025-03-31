@@ -9,8 +9,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@types/vis": "4.21.27",
     "axios": "^1.8.4",
     "pinia": "^3.0.1",
+    "vis-data": "7.1.9",
+    "vis-network": "9.1.9",
     "vue": "^3.5.13"
   },
   "devDependencies": {
