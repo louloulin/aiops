@@ -41,6 +41,97 @@ const filteredMetrics = computed(() => {
   });
 });
 
+// 添加计算属性用于处理编辑的指标字段
+const metricName = computed({
+  get: () => editingMetric.value ? editingMetric.value.name : '',
+  set: (val) => {
+    if (editingMetric.value) {
+      editingMetric.value.name = val;
+    }
+  }
+});
+
+const metricCategory = computed({
+  get: () => editingMetric.value ? editingMetric.value.category : 'business',
+  set: (val) => {
+    if (editingMetric.value) {
+      editingMetric.value.category = val;
+    }
+  }
+});
+
+const metricDescription = computed({
+  get: () => editingMetric.value ? editingMetric.value.description : '',
+  set: (val) => {
+    if (editingMetric.value) {
+      editingMetric.value.description = val;
+    }
+  }
+});
+
+const metricDataSource = computed({
+  get: () => editingMetric.value ? editingMetric.value.dataSource : '',
+  set: (val) => {
+    if (editingMetric.value) {
+      editingMetric.value.dataSource = val;
+    }
+  }
+});
+
+const metricAggregation = computed({
+  get: () => editingMetric.value ? editingMetric.value.aggregation : 'avg',
+  set: (val) => {
+    if (editingMetric.value) {
+      editingMetric.value.aggregation = val;
+    }
+  }
+});
+
+const metricQuery = computed({
+  get: () => editingMetric.value ? editingMetric.value.query : '',
+  set: (val) => {
+    if (editingMetric.value) {
+      editingMetric.value.query = val;
+    }
+  }
+});
+
+const metricUnit = computed({
+  get: () => editingMetric.value ? editingMetric.value.unit : '',
+  set: (val) => {
+    if (editingMetric.value) {
+      editingMetric.value.unit = val;
+    }
+  }
+});
+
+const metricWarningThreshold = computed({
+  get: () => editingMetric.value && editingMetric.value.thresholds ? editingMetric.value.thresholds.warning : null,
+  set: (val) => {
+    if (editingMetric.value && editingMetric.value.thresholds) {
+      editingMetric.value.thresholds.warning = val;
+    }
+  }
+});
+
+const metricCriticalThreshold = computed({
+  get: () => editingMetric.value && editingMetric.value.thresholds ? editingMetric.value.thresholds.critical : null,
+  set: (val) => {
+    if (editingMetric.value && editingMetric.value.thresholds) {
+      editingMetric.value.thresholds.critical = val;
+    }
+  }
+});
+
+const metricStatus = computed({
+  get: () => editingMetric.value ? editingMetric.value.status : 'draft',
+  set: (val) => {
+    if (editingMetric.value) {
+      editingMetric.value.status = val;
+    }
+  }
+});
+
 // Methods
 const fetchMetrics = async () => {
   try {
@@ -340,7 +431,7 @@ onMounted(() => {
             <label class="block text-sm font-medium text-gray-300 mb-1">指标名称</label>
             <input
               type="text"
-              v-model="editingMetric ? editingMetric.name : ''"
+              v-model="metricName"
               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="例如: 用户活跃度"
             />
@@ -349,7 +440,7 @@ onMounted(() => {
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">类别</label>
             <select
-              v-model="editingMetric ? editingMetric.category : 'business'"
+              v-model="metricCategory"
               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="user">用户指标</option>
@@ -364,7 +455,7 @@ onMounted(() => {
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">描述</label>
           <textarea
-            v-model="editingMetric ? editingMetric.description : ''"
+            v-model="metricDescription"
             class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             rows="2"
             placeholder="指标的详细描述"
@@ -375,7 +466,7 @@ onMounted(() => {
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">数据源</label>
             <select
-              v-model="editingMetric ? editingMetric.dataSource : ''"
+              v-model="metricDataSource"
               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="Prometheus 1">Prometheus 1</option>
@@ -387,7 +478,7 @@ onMounted(() => {
           <div>
             <label class="block text-sm font-medium text-gray-300 mb-1">聚合方式</label>
             <select
-              v-model="editingMetric ? editingMetric.aggregation : 'avg'"
+              v-model="metricAggregation"
               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="avg">平均值</option>
@@ -402,7 +493,7 @@ onMounted(() => {
         <div>
           <label class="block text-sm font-medium text-gray-300 mb-1">查询表达式</label>
           <textarea
-            v-model="editingMetric ? editingMetric.query : ''"
+            v-model="metricQuery"
             class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono"
             rows="3"
             placeholder="例如: sum(active_users)"
@@ -414,7 +505,7 @@ onMounted(() => {
             <label class="block text-sm font-medium text-gray-300 mb-1">单位</label>
             <input
               type="text"
-              v-model="editingMetric ? editingMetric.unit : ''"
+              v-model="metricUnit"
               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="例如: ms, %, 次/秒"
             />
@@ -424,7 +515,7 @@ onMounted(() => {
             <label class="block text-sm font-medium text-gray-300 mb-1">警告阈值</label>
             <input
               type="number"
-              v-model="editingMetric && editingMetric.thresholds ? editingMetric.thresholds.warning : ''"
+              v-model="metricWarningThreshold"
               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="警告阈值"
             />
@@ -434,7 +525,7 @@ onMounted(() => {
             <label class="block text-sm font-medium text-gray-300 mb-1">严重阈值</label>
             <input
               type="number"
-              v-model="editingMetric && editingMetric.thresholds ? editingMetric.thresholds.critical : ''"
+              v-model="metricCriticalThreshold"
               class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="严重阈值"
             />
@@ -447,7 +538,7 @@ onMounted(() => {
             <label class="inline-flex items-center">
               <input
                 type="radio"
-                v-model="editingMetric ? editingMetric.status : 'draft'"
+                v-model="metricStatus"
                 value="active"
                 class="text-blue-600"
               />
@@ -456,7 +547,7 @@ onMounted(() => {
             <label class="inline-flex items-center">
               <input
                 type="radio"
-                v-model="editingMetric ? editingMetric.status : 'draft'"
+                v-model="metricStatus"
                 value="inactive"
                 class="text-blue-600"
               />
@@ -465,7 +556,7 @@ onMounted(() => {
             <label class="inline-flex items-center">
               <input
                 type="radio"
-                v-model="editingMetric ? editingMetric.status : 'draft'"
+                v-model="metricStatus"
                 value="draft"
                 class="text-blue-600"
               />
