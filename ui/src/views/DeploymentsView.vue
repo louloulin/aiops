@@ -105,7 +105,7 @@ onMounted(() => {
 <template>
   <div class="container mx-auto px-4 py-6">
     <div class="mb-6 flex justify-between items-center">
-      <h1 class="text-2xl font-semibold">部署历史</h1>
+      <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">部署历史</h1>
       <div class="flex space-x-2">
         <button 
           @click="fetchDeployments" 
@@ -118,47 +118,47 @@ onMounted(() => {
     </div>
     
     <!-- 错误信息 -->
-    <div v-if="error" class="mb-6 p-4 bg-red-900/30 text-red-400 rounded-md">
+    <div v-if="error" class="mb-6 p-4 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded-md">
       <p>加载部署数据失败: {{ error }}</p>
     </div>
     
     <!-- 部署列表 -->
-    <div class="bg-[#212121] rounded-md border border-gray-800 overflow-hidden">
+    <div class="bg-white dark:bg-[#212121] rounded-md border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
       <div v-if="loading" class="p-6">
         <div class="animate-pulse space-y-4">
-          <div class="h-4 bg-gray-700 rounded w-3/4"></div>
-          <div class="h-4 bg-gray-700 rounded w-1/2"></div>
-          <div class="h-4 bg-gray-700 rounded w-5/6"></div>
-          <div class="h-4 bg-gray-700 rounded w-2/3"></div>
-          <div class="h-4 bg-gray-700 rounded w-3/4"></div>
+          <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+          <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+          <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-5/6"></div>
+          <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+          <div class="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
         </div>
       </div>
       
-      <div v-else-if="!deployments || deployments.length === 0" class="p-6 text-center text-gray-500">
+      <div v-else-if="!deployments || deployments.length === 0" class="p-6 text-center text-gray-500 dark:text-gray-400">
         没有找到部署记录
       </div>
       
       <div v-else>
-        <table class="min-w-full divide-y divide-gray-800">
-          <thead class="bg-[#1c1c1c]">
+        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-800">
+          <thead class="bg-gray-50 dark:bg-[#1c1c1c]">
             <tr>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">服务</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">版本</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">环境</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">状态</th>
-              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">时间</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">服务</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">版本</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">环境</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">状态</th>
+              <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">时间</th>
             </tr>
           </thead>
-          <tbody class="bg-[#212121] divide-y divide-gray-800">
-            <tr v-for="deployment in deployments" :key="deployment.id" class="hover:bg-[#2a2a2a] transition-colors">
+          <tbody class="bg-white dark:bg-[#212121] divide-y divide-gray-200 dark:divide-gray-800">
+            <tr v-for="deployment in deployments" :key="deployment.id" class="hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors">
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-white">{{ deployment.name }}</div>
+                <div class="text-sm text-gray-900 dark:text-white">{{ deployment.name }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-white">{{ deployment.version }}</div>
+                <div class="text-sm text-gray-900 dark:text-white">{{ deployment.version }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
-                <div class="text-sm text-gray-400">{{ deployment.environment || '-' }}</div>
+                <div class="text-sm text-gray-500 dark:text-gray-400">{{ deployment.environment || '-' }}</div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap">
                 <span 
@@ -168,7 +168,7 @@ onMounted(() => {
                   {{ deployment.status }}
                 </span>
               </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                 {{ formatTimestamp(deployment.timestamp) }}
               </td>
             </tr>

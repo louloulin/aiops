@@ -122,8 +122,8 @@ const formatBytes = (bytes: number): string => {
 const getStatusColor = (value: number, thresholds: {low: number, medium: number, high: number}): string => {
   if (value >= thresholds.high) return 'bg-red-500';
   if (value >= thresholds.medium) return 'bg-yellow-500';
-  if (value >= thresholds.low) return 'bg-green-500';
-  return 'bg-gray-500';
+  if (value >= thresholds.low) return 'bg-green-500 dark:bg-emerald-500';
+  return 'bg-gray-400 dark:bg-gray-500';
 };
 
 // 组件挂载时获取数据
@@ -143,26 +143,26 @@ onMounted(() => {
 <template>
   <div class="supabase-card p-4 mt-4">
     <div class="flex justify-between items-center mb-4">
-      <h2 class="text-lg font-semibold text-white flex items-center">
+      <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
         <span class="mr-2">系统指标</span>
-        <span v-if="metrics && !loading" class="text-xs text-gray-400">
+        <span v-if="metrics && !loading" class="text-xs text-gray-500 dark:text-gray-400">
           更新于 {{ lastUpdated.toLocaleTimeString() }}
         </span>
       </h2>
       <button 
         @click="refreshMetrics" 
-        class="p-1 rounded-md hover:bg-gray-700 transition-colors"
+        class="p-1 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         :disabled="loading"
       >
-        <ArrowPathIcon class="h-5 w-5 text-gray-400" :class="{ 'animate-spin': loading }" />
+        <ArrowPathIcon class="h-5 w-5 text-gray-500 dark:text-gray-400" :class="{ 'animate-spin': loading }" />
       </button>
     </div>
     
-    <div v-if="error" class="bg-red-900/30 text-red-400 p-3 rounded-md mb-4">
+    <div v-if="error" class="bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 p-3 rounded-md mb-4">
       <p>加载指标数据失败: {{ error }}</p>
       <button 
         @click="refreshMetrics"
-        class="mt-2 px-3 py-1 bg-red-900/50 hover:bg-red-900/70 rounded-md text-sm text-red-200"
+        class="mt-2 px-3 py-1 bg-red-200 dark:bg-red-900/50 hover:bg-red-300 dark:hover:bg-red-900/70 rounded-md text-sm text-red-700 dark:text-red-200"
       >
         重试
       </button>
@@ -170,20 +170,20 @@ onMounted(() => {
     
     <div v-if="loading && !metrics" class="animate-pulse">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div v-for="i in 4" :key="i" class="h-24 bg-gray-800 rounded-md"></div>
+        <div v-for="i in 4" :key="i" class="h-24 bg-gray-200 dark:bg-gray-800 rounded-md"></div>
       </div>
-      <div class="h-6 bg-gray-800 rounded-md w-3/4 mb-2"></div>
-      <div class="h-6 bg-gray-800 rounded-md w-1/2"></div>
+      <div class="h-6 bg-gray-200 dark:bg-gray-800 rounded-md w-3/4 mb-2"></div>
+      <div class="h-6 bg-gray-200 dark:bg-gray-800 rounded-md w-1/2"></div>
     </div>
     
     <div v-else-if="metrics">
       <!-- 主要指标卡片 -->
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <!-- CPU 使用率 -->
-        <div class="bg-[#212121] rounded-md p-3 border border-gray-800">
-          <div class="text-xs text-gray-400 mb-2">CPU 使用率</div>
+        <div class="bg-white dark:bg-[#212121] rounded-md p-3 border border-gray-200 dark:border-gray-800 shadow-sm">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">CPU 使用率</div>
           <div class="flex items-end">
-            <div class="text-2xl font-semibold text-white">
+            <div class="text-2xl font-semibold text-gray-900 dark:text-white">
               {{ metrics.cpu.usage.toFixed(1) }}%
             </div>
             <div 
@@ -191,10 +191,10 @@ onMounted(() => {
               :class="getStatusColor(metrics.cpu.usage, {low: 20, medium: 60, high: 85})"
             ></div>
           </div>
-          <div class="text-xs text-gray-400 mt-1">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
             温度: {{ metrics.cpu.temperature.toFixed(1) }}°C
           </div>
-          <div class="mt-2 w-full bg-gray-700 rounded-full h-1.5">
+          <div class="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
             <div 
               class="h-1.5 rounded-full"
               :class="getStatusColor(metrics.cpu.usage, {low: 20, medium: 60, high: 85})"
@@ -204,10 +204,10 @@ onMounted(() => {
         </div>
         
         <!-- 内存使用率 -->
-        <div class="bg-[#212121] rounded-md p-3 border border-gray-800">
-          <div class="text-xs text-gray-400 mb-2">内存使用率</div>
+        <div class="bg-white dark:bg-[#212121] rounded-md p-3 border border-gray-200 dark:border-gray-800 shadow-sm">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">内存使用率</div>
           <div class="flex items-end">
-            <div class="text-2xl font-semibold text-white">
+            <div class="text-2xl font-semibold text-gray-900 dark:text-white">
               {{ memoryUsagePercent }}%
             </div>
             <div 
@@ -215,10 +215,10 @@ onMounted(() => {
               :class="getStatusColor(memoryUsagePercent, {low: 30, medium: 70, high: 90})"
             ></div>
           </div>
-          <div class="text-xs text-gray-400 mt-1">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {{ formatBytes(metrics.memory.used) }} / {{ formatBytes(metrics.memory.total) }}
           </div>
-          <div class="mt-2 w-full bg-gray-700 rounded-full h-1.5">
+          <div class="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
             <div 
               class="h-1.5 rounded-full"
               :class="getStatusColor(memoryUsagePercent, {low: 30, medium: 70, high: 90})"
@@ -228,10 +228,10 @@ onMounted(() => {
         </div>
         
         <!-- 磁盘使用率 -->
-        <div class="bg-[#212121] rounded-md p-3 border border-gray-800">
-          <div class="text-xs text-gray-400 mb-2">磁盘使用率</div>
+        <div class="bg-white dark:bg-[#212121] rounded-md p-3 border border-gray-200 dark:border-gray-800 shadow-sm">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">磁盘使用率</div>
           <div class="flex items-end">
-            <div class="text-2xl font-semibold text-white">
+            <div class="text-2xl font-semibold text-gray-900 dark:text-white">
               {{ diskUsagePercent }}%
             </div>
             <div 
@@ -239,10 +239,10 @@ onMounted(() => {
               :class="getStatusColor(diskUsagePercent, {low: 20, medium: 65, high: 85})"
             ></div>
           </div>
-          <div class="text-xs text-gray-400 mt-1">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
             {{ formatBytes(metrics.disk.free) }} 可用
           </div>
-          <div class="mt-2 w-full bg-gray-700 rounded-full h-1.5">
+          <div class="mt-2 w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
             <div 
               class="h-1.5 rounded-full"
               :class="getStatusColor(diskUsagePercent, {low: 20, medium: 65, high: 85})"
@@ -252,20 +252,18 @@ onMounted(() => {
         </div>
         
         <!-- 网络流量 -->
-        <div class="bg-[#212121] rounded-md p-3 border border-gray-800">
-          <div class="text-xs text-gray-400 mb-2">网络流量</div>
-          <div class="text-2xl font-semibold text-white">
-            {{ formatBytes(metrics.network.bytesIn + metrics.network.bytesOut) }}
+        <div class="bg-white dark:bg-[#212121] rounded-md p-3 border border-gray-200 dark:border-gray-800 shadow-sm">
+          <div class="text-xs text-gray-500 dark:text-gray-400 mb-2">网络流量</div>
+          <div class="flex items-end">
+            <div class="text-2xl font-semibold text-gray-900 dark:text-white">
+              {{ formatBytes(metrics.network.bytesIn) }}
+            </div>
           </div>
-          <div class="flex justify-between text-xs text-gray-400 mt-1">
-            <span>↓ {{ formatBytes(metrics.network.bytesIn) }}</span>
-            <span>↑ {{ formatBytes(metrics.network.bytesOut) }}</span>
+          <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            入站: {{ formatBytes(metrics.network.bytesIn) }}
           </div>
-          <div class="mt-2 w-full bg-gray-700 rounded-full h-1.5">
-            <div 
-              class="bg-blue-500 h-1.5 rounded-full"
-              :style="`width: ${Math.min(70 + Math.random() * 20, 100)}%`"
-            ></div>
+          <div class="text-xs text-gray-500 dark:text-gray-400">
+            出站: {{ formatBytes(metrics.network.bytesOut) }}
           </div>
         </div>
       </div>
