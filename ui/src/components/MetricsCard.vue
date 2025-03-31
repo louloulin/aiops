@@ -272,7 +272,7 @@ onMounted(() => {
       <div class="text-right">
         <router-link 
           to="/metrics" 
-          class="inline-flex items-center text-sm text-gray-400 hover:text-white transition-colors"
+          class="inline-flex items-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
         >
           查看详细指标 
           <ChevronRightIcon class="h-4 w-4 ml-1" />
