@@ -56,21 +56,38 @@ const fetchLogs = async () => {
   try {
     loading.value.logs = true;
     const response = await fetch(`${import.meta.env.VITE_API_URL}/logs?limit=5`);
-    logs.value = await response.json();
+    const data = await response.json();
+    
+    // Ensure logs is always an array
+    if (Array.isArray(data)) {
+      logs.value = data;
+    } else if (data.rows && Array.isArray(data.rows)) {
+      logs.value = data.rows;
+    } else {
+      // If response is not in expected format, use mock data
+      generateMockLogs();
+    }
   } catch (error) {
     console.error('Error fetching logs:', error);
-    // 开发环境中生成模拟数据
-    if (import.meta.env.DEV) {
-      logs.value = [
-        { level: 'error', message: 'Database connection failed', service: 'api', timestamp: new Date().toISOString() },
-        { level: 'warn', message: 'High CPU usage detected', service: 'monitoring', timestamp: new Date().toISOString() },
-        { level: 'info', message: 'Application started successfully', service: 'api', timestamp: new Date().toISOString() },
-        { level: 'debug', message: 'Processing request #1234', service: 'api', timestamp: new Date().toISOString() },
-        { level: 'info', message: 'User login successful', service: 'auth', timestamp: new Date().toISOString() },
-      ];
-    }
+    // Generate mock data when there's an error
+    generateMockLogs();
   } finally {
     loading.value.logs = false;
+  }
+};
+
+const generateMockLogs = () => {
+  // Only generate mock data in development
+  if (import.meta.env.DEV) {
+    logs.value = [
+      { level: 'error', message: 'Database connection failed', service: 'api', timestamp: new Date().toISOString() },
+      { level: 'warn', message: 'High CPU usage detected', service: 'monitoring', timestamp: new Date().toISOString() },
+      { level: 'info', message: 'Application started successfully', service: 'api', timestamp: new Date().toISOString() },
+      { level: 'debug', message: 'Processing request #1234', service: 'api', timestamp: new Date().toISOString() },
+      { level: 'info', message: 'User login successful', service: 'auth', timestamp: new Date().toISOString() },
+    ];
+  } else {
+    logs.value = [];
   }
 };
 
@@ -78,19 +95,36 @@ const fetchDeployments = async () => {
   try {
     loading.value.deployments = true;
     const response = await fetch(`${import.meta.env.VITE_API_URL}/deploy?limit=5`);
-    deployments.value = await response.json();
+    const data = await response.json();
+    
+    // Ensure deployments is always an array
+    if (Array.isArray(data)) {
+      deployments.value = data;
+    } else if (data.rows && Array.isArray(data.rows)) {
+      deployments.value = data.rows;
+    } else {
+      // If response is not in expected format, use mock data
+      generateMockDeployments();
+    }
   } catch (error) {
     console.error('Error fetching deployments:', error);
-    // 开发环境中生成模拟数据
-    if (import.meta.env.DEV) {
-      deployments.value = [
-        { id: 1, name: 'api-service', version: 'v1.2.3', status: 'success', timestamp: new Date().toISOString() },
-        { id: 2, name: 'ui', version: 'v2.0.1', status: 'pending', timestamp: new Date().toISOString() },
-        { id: 3, name: 'database', version: 'v1.0.5', status: 'success', timestamp: new Date().toISOString() },
-      ];
-    }
+    // Generate mock data when there's an error
+    generateMockDeployments();
   } finally {
     loading.value.deployments = false;
+  }
+};
+
+const generateMockDeployments = () => {
+  // Only generate mock data in development
+  if (import.meta.env.DEV) {
+    deployments.value = [
+      { id: 1, name: 'api-service', version: 'v1.2.3', status: 'success', created_at: new Date().toISOString() },
+      { id: 2, name: 'ui', version: 'v2.0.1', status: 'pending', created_at: new Date().toISOString() },
+      { id: 3, name: 'database', version: 'v1.0.5', status: 'success', created_at: new Date().toISOString() },
+    ];
+  } else {
+    deployments.value = [];
   }
 };
 

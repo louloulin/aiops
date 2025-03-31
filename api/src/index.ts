@@ -6,6 +6,9 @@ import dotenv from 'dotenv';
 import { agentRoutes } from './routes/agent';
 import { metricsRoutes } from './routes/metrics';
 import { logsRoutes } from './routes/logs';
+import { deployRoutes } from './routes/deploy';
+import { autohealRoutes } from './routes/autoheal';
+import { knowledgeRoutes } from './routes/knowledge';
 import { monitoringAgent } from './agents/monitoringAgent';
 import { logAnalysisAgent } from './agents/logAnalysisAgent';
 import { autoHealingAgent } from './agents/autoHealingAgent';
@@ -23,7 +26,7 @@ const app = new Hono();
 // 中间件
 app.use(logger());
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:5177'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:5176', 'http://localhost:5177', 'http://localhost:7400'],
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   exposeHeaders: ['Content-Length', 'Content-Type'],
@@ -38,6 +41,9 @@ app.get('/', (c) => c.json({ status: 'ok', message: 'AI OPS API服务正常运�
 app.route('/api/agent', agentRoutes);
 app.route('/api/metrics', metricsRoutes);
 app.route('/api/logs', logsRoutes);
+app.route('/api/deploy', deployRoutes);
+app.route('/api/autoheal', autohealRoutes);
+app.route('/api/knowledge', knowledgeRoutes);
 
 // 添加数据库路由
 app.get('/api/health', async (c) => {

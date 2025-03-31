@@ -8,6 +8,13 @@
       "when": 1742796376851,
       "tag": "0000_mighty_wolf_cub",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1742797000000,
+      "tag": "0001_logs_deployments",
+      "breakpoints": true
     }
   ]
 }
