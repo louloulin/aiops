@@ -1,67 +1,90 @@
 <!-- MetricsDashboard.vue -->
 <template>
-  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-    <!-- CPU Card -->
-    <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
-      <div class="p-6">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-medium">CPU Usage</h3>
-          <span class="text-sm text-muted-foreground">{{ metrics.cpu?.cores }} Cores</span>
+  <div class="space-y-6">
+    <div class="flex items-center justify-between">
+      <h2 class="text-2xl font-semibold text-white">System Metrics</h2>
+      <button 
+        @click="refreshMetrics" 
+        class="p-2 rounded-md hover:bg-gray-700 transition-colors"
+        :disabled="loading"
+      >
+        <div class="h-5 w-5 text-gray-400" :class="{ 'animate-spin': loading }">
+          ↻
         </div>
-        <div class="mt-4">
-          <div class="text-3xl font-bold">{{ formatNumber(metrics.cpu?.usage) }}%</div>
-          <div class="mt-2 h-2 w-full rounded-full bg-secondary">
-            <div
-              class="h-2 rounded-full bg-primary transition-all"
-              :style="{ width: `${metrics.cpu?.usage || 0}%` }"
-            ></div>
+      </button>
+    </div>
+
+    <!-- System Metrics -->
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <!-- CPU Card -->
+      <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div class="p-6">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-medium">CPU Usage</h3>
+            <span class="text-sm text-muted-foreground">{{ metrics.cpu?.cores }} Cores</span>
+          </div>
+          <div class="mt-4">
+            <div class="text-3xl font-bold">{{ formatNumber(metrics.cpu?.usage) }}%</div>
+            <div class="mt-2 h-2 w-full rounded-full bg-secondary">
+              <div
+                class="h-2 rounded-full bg-primary transition-all"
+                :style="{ width: `${metrics.cpu?.usage || 0}%` }"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Memory Card -->
+      <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div class="p-6">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-medium">Memory Usage</h3>
+            <span class="text-sm text-muted-foreground">{{ formatBytes(metrics.memory?.total || 0) }}</span>
+          </div>
+          <div class="mt-4">
+            <div class="text-3xl font-bold">{{ formatBytes(metrics.memory?.used || 0) }}</div>
+            <div class="mt-2 h-2 w-full rounded-full bg-secondary">
+              <div
+                class="h-2 rounded-full bg-primary transition-all"
+                :style="{ width: `${(metrics.memory?.used || 0) / (metrics.memory?.total || 1) * 100}%` }"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Disk Card -->
+      <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div class="p-6">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-medium">Disk Usage</h3>
+            <span class="text-sm text-muted-foreground">{{ formatBytes(metrics.disk?.total || 0) }}</span>
+          </div>
+          <div class="mt-4">
+            <div class="text-3xl font-bold">{{ formatBytes(metrics.disk?.used || 0) }}</div>
+            <div class="mt-2 h-2 w-full rounded-full bg-secondary">
+              <div
+                class="h-2 rounded-full bg-primary transition-all"
+                :style="{ width: `${(metrics.disk?.used || 0) / (metrics.disk?.total || 1) * 100}%` }"
+              ></div>
+            </div>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- Memory Card -->
-    <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
-      <div class="p-6">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-medium">Memory Usage</h3>
-          <span class="text-sm text-muted-foreground">{{ formatBytes(metrics.memory?.total || 0) }}</span>
-        </div>
-        <div class="mt-4">
-          <div class="text-3xl font-bold">{{ formatBytes(metrics.memory?.used || 0) }}</div>
-          <div class="mt-2 h-2 w-full rounded-full bg-secondary">
-            <div
-              class="h-2 rounded-full bg-primary transition-all"
-              :style="{ width: `${(metrics.memory?.used || 0) / (metrics.memory?.total || 1) * 100}%` }"
-            ></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Disk Card -->
-    <div class="rounded-lg border bg-card text-card-foreground shadow-sm">
-      <div class="p-6">
-        <div class="flex items-center justify-between">
-          <h3 class="text-lg font-medium">Disk Usage</h3>
-          <span class="text-sm text-muted-foreground">{{ formatBytes(metrics.disk?.total || 0) }}</span>
-        </div>
-        <div class="mt-4">
-          <div class="text-3xl font-bold">{{ formatBytes(metrics.disk?.used || 0) }}</div>
-          <div class="mt-2 h-2 w-full rounded-full bg-secondary">
-            <div
-              class="h-2 rounded-full bg-primary transition-all"
-              :style="{ width: `${(metrics.disk?.used || 0) / (metrics.disk?.total || 1) * 100}%` }"
-            ></div>
-          </div>
-        </div>
-      </div>
+    <!-- Application Metrics -->
+    <div class="mt-8">
+      <h2 class="text-2xl font-semibold text-white mb-6">Application Metrics</h2>
+      <ApplicationMetrics />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import ApplicationMetrics from './ApplicationMetrics.vue';
 
 interface SystemMetrics {
   cpu?: {
@@ -105,6 +128,10 @@ const formatBytes = (bytes: number): string => {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
 };
 
+const refreshMetrics = () => {
+  fetchMetrics();
+};
+
 const fetchMetrics = async () => {
   loading.value = true;
   error.value = null;
@@ -119,7 +146,6 @@ const fetchMetrics = async () => {
     const data = await response.json();
     
     if (data.success && data.data) {
-      // 转换API返回的格式到组件使用的格式
       metrics.value = {
         cpu: {
           usage: data.data.cpu.usage,

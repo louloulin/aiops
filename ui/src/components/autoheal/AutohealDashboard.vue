@@ -1,331 +1,245 @@
-<!-- AutohealDashboard.vue -->
+<!-- AutoHealDashboard.vue -->
 <template>
   <div class="space-y-6">
-    <div class="flex justify-between items-center">
-      <h2 class="text-2xl font-bold">Auto-heal System</h2>
-      <div class="flex space-x-2">
-        <button @click="fetchIncidents" 
-                class="rounded-md bg-secondary text-secondary-foreground px-4 py-2">
-          Refresh
-        </button>
-        <button @click="openConfigModal" 
-                class="rounded-md bg-primary text-primary-foreground px-4 py-2">
-          Configure Rules
-        </button>
+    <!-- Status Overview -->
+    <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h3 class="text-sm font-medium text-gray-400">Active Repairs</h3>
+        <p class="mt-2 text-2xl font-semibold text-white">{{ activeRepairs.length }}</p>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h3 class="text-sm font-medium text-gray-400">Success Rate</h3>
+        <p class="mt-2 text-2xl font-semibold text-white">{{ successRate }}%</p>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h3 class="text-sm font-medium text-gray-400">Total Fixed</h3>
+        <p class="mt-2 text-2xl font-semibold text-white">{{ totalFixed }}</p>
+      </div>
+      <div class="bg-gray-800 rounded-lg p-4 border border-gray-700">
+        <h3 class="text-sm font-medium text-gray-400">MTTR</h3>
+        <p class="mt-2 text-2xl font-semibold text-white">{{ formatDuration(mttr) }}</p>
       </div>
     </div>
 
-    <!-- Active Incidents -->
-    <div class="rounded-lg border bg-card">
+    <!-- Active Repairs -->
+    <div class="bg-gray-800 rounded-lg border border-gray-700">
+      <div class="p-4 border-b border-gray-700">
+        <h2 class="text-lg font-semibold text-white">Active Repairs</h2>
+      </div>
       <div class="p-4">
-        <h3 class="text-lg font-semibold mb-4">Active Incidents</h3>
-        <div class="space-y-4">
-          <div v-for="incident in activeIncidents" :key="incident.id"
-               class="flex items-center justify-between p-4 border rounded-md">
-            <div class="space-y-1">
-              <div class="font-medium">{{ incident.title }}</div>
-              <div class="text-sm text-muted-foreground">{{ incident.service }}</div>
-              <div class="text-sm">
-                <span :class="{
-                  'text-destructive': incident.severity === 'critical',
-                  'text-yellow-500': incident.severity === 'warning',
-                  'text-blue-500': incident.severity === 'info'
-                }">
-                  {{ incident.severity.toUpperCase() }}
+        <div v-if="activeRepairs.length === 0" class="text-center text-gray-400 py-8">
+          No active repairs
+        </div>
+        <div v-else class="space-y-4">
+          <div
+            v-for="repair in activeRepairs"
+            :key="repair.id"
+            class="bg-gray-900 rounded-lg p-4"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <h3 class="text-white font-medium">{{ repair.issue }}</h3>
+                <p class="text-sm text-gray-400">{{ repair.service }}</p>
+              </div>
+              <span
+                :class="getStatusColor(repair.status)"
+                class="px-3 py-1 rounded-full text-xs font-medium"
+              >
+                {{ repair.status }}
+              </span>
+            </div>
+            <div class="mt-4">
+              <div class="text-sm text-gray-400">Progress</div>
+              <div class="mt-2 h-2 w-full bg-gray-700 rounded-full">
+                <div
+                  class="h-2 rounded-full bg-blue-500"
+                  :style="{ width: `${repair.progress}%` }"
+                ></div>
+              </div>
+            </div>
+            <div class="mt-4 flex justify-between text-sm">
+              <span class="text-gray-400">Started: {{ formatTime(repair.startTime) }}</span>
+              <span class="text-gray-400">ETA: {{ formatTime(repair.eta) }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Repair History -->
+    <div class="bg-gray-800 rounded-lg border border-gray-700">
+      <div class="p-4 border-b border-gray-700">
+        <h2 class="text-lg font-semibold text-white">Repair History</h2>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="text-left border-b border-gray-700">
+              <th class="p-4 text-gray-400 font-medium">Issue</th>
+              <th class="p-4 text-gray-400 font-medium">Service</th>
+              <th class="p-4 text-gray-400 font-medium">Status</th>
+              <th class="p-4 text-gray-400 font-medium">Duration</th>
+              <th class="p-4 text-gray-400 font-medium">Fixed At</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="repair in repairHistory"
+              :key="repair.id"
+              class="border-b border-gray-700 hover:bg-gray-700/50"
+            >
+              <td class="p-4 text-sm text-white">{{ repair.issue }}</td>
+              <td class="p-4 text-sm text-gray-300">{{ repair.service }}</td>
+              <td class="p-4">
+                <span
+                  :class="getStatusColor(repair.status)"
+                  class="px-2 py-1 rounded-full text-xs font-medium"
+                >
+                  {{ repair.status }}
                 </span>
-                - {{ incident.status }}
-              </div>
-            </div>
-            <div class="flex items-center space-x-4">
-              <button v-if="incident.status === 'detected'"
-                      @click="startAutoHeal(incident.id)"
-                      class="text-sm bg-primary text-primary-foreground px-3 py-1 rounded-md">
-                Start Auto-heal
-              </button>
-              <button v-if="incident.status === 'healing'"
-                      @click="stopAutoHeal(incident.id)"
-                      class="text-sm bg-destructive text-destructive-foreground px-3 py-1 rounded-md">
-                Stop
-              </button>
-            </div>
-          </div>
-          <div v-if="activeIncidents.length === 0" class="text-center text-muted-foreground py-8">
-            No active incidents
-          </div>
-        </div>
+              </td>
+              <td class="p-4 text-sm text-gray-300">{{ repair.duration ? formatDuration(repair.duration) : '-' }}</td>
+              <td class="p-4 text-sm text-gray-300">{{ repair.fixedAt ? formatTime(repair.fixedAt) : '-' }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
-
-    <!-- Recent Auto-heal Actions -->
-    <div class="rounded-lg border bg-card">
-      <div class="p-4">
-        <h3 class="text-lg font-semibold mb-4">Recent Auto-heal Actions</h3>
-        <div class="space-y-4">
-          <div v-for="action in recentActions" :key="action.id"
-               class="flex items-center justify-between p-4 border rounded-md">
-            <div class="space-y-1">
-              <div class="font-medium">{{ action.action }}</div>
-              <div class="text-sm text-muted-foreground">{{ action.service }}</div>
-              <div class="text-sm">
-                <span :class="{
-                  'text-green-500': action.result === 'success',
-                  'text-destructive': action.result === 'failed'
-                }">
-                  {{ action.result.toUpperCase() }}
-                </span>
-                - {{ formatDate(action.timestamp) }}
-              </div>
-            </div>
-            <button v-if="action.result === 'failed'"
-                    @click="retryAction(action.id)"
-                    class="text-sm text-primary hover:underline">
-              Retry
-            </button>
-          </div>
-          <div v-if="recentActions.length === 0" class="text-center text-muted-foreground py-8">
-            No recent actions
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Configuration Modal -->
-    <div v-if="showConfigModal" class="fixed inset-0 bg-background/80 backdrop-blur-sm">
-      <div class="fixed inset-x-0 top-16 z-50 w-full max-w-2xl mx-auto p-6 rounded-lg border bg-card shadow-lg">
-        <div class="flex justify-between items-center mb-6">
-          <h3 class="text-lg font-semibold">Auto-heal Configuration</h3>
-          <button @click="showConfigModal = false" class="text-muted-foreground hover:text-foreground">
-            ✕
-          </button>
-        </div>
-        <div class="space-y-6">
-          <div v-for="(rule, index) in healingRules" :key="index" class="space-y-4 p-4 border rounded-md">
-            <div class="flex justify-between items-start">
-              <div class="space-y-1">
-                <h4 class="font-medium">Rule {{ index + 1 }}</h4>
-                <p class="text-sm text-muted-foreground">{{ rule.description }}</p>
-              </div>
-              <button @click="removeRule(index)" class="text-destructive hover:text-destructive/80">
-                Delete
-              </button>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
-              <div class="space-y-2">
-                <label class="text-sm font-medium">Condition</label>
-                <select v-model="rule.condition" class="w-full rounded-md border bg-background px-3 py-2">
-                  <option value="cpu_high">CPU Usage High</option>
-                  <option value="memory_high">Memory Usage High</option>
-                  <option value="disk_full">Disk Space Low</option>
-                  <option value="service_down">Service Down</option>
-                </select>
-              </div>
-              <div class="space-y-2">
-                <label class="text-sm font-medium">Action</label>
-                <select v-model="rule.action" class="w-full rounded-md border bg-background px-3 py-2">
-                  <option value="restart_service">Restart Service</option>
-                  <option value="scale_up">Scale Up</option>
-                  <option value="cleanup">Cleanup</option>
-                  <option value="notify">Notify Only</option>
-                </select>
-              </div>
-            </div>
-            <div class="space-y-2">
-              <label class="text-sm font-medium">Threshold</label>
-              <input v-model="rule.threshold"
-                     type="number"
-                     class="w-full rounded-md border bg-background px-3 py-2" />
-            </div>
-          </div>
-          <button @click="addRule" class="w-full rounded-md border border-dashed text-muted-foreground p-4 hover:text-foreground">
-            + Add Rule
-          </button>
-          <div class="flex justify-end space-x-2 mt-6">
-            <button @click="showConfigModal = false" class="rounded-md border px-4 py-2">
-              Cancel
-            </button>
-            <button @click="saveRules" class="rounded-md bg-primary text-primary-foreground px-4 py-2">
-              Save Configuration
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div v-if="error" class="rounded-md bg-destructive/10 text-destructive p-4">
-      {{ error }}
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 
-interface Incident {
+interface Repair {
   id: string;
-  title: string;
+  issue: string;
   service: string;
-  severity: 'critical' | 'warning' | 'info';
-  status: 'detected' | 'healing' | 'resolved';
-  timestamp: string;
+  status: 'diagnosing' | 'repairing' | 'verifying' | 'completed' | 'failed';
+  progress: number;
+  startTime: string;
+  eta: string;
+  duration?: number;
+  fixedAt?: string;
 }
 
-interface Action {
-  id: string;
-  action: string;
-  service: string;
-  result: 'success' | 'failed';
-  timestamp: string;
-}
+// State
+const activeRepairs = ref<Repair[]>([]);
+const repairHistory = ref<Repair[]>([]);
+const totalFixed = ref(0);
+const mttr = ref(0); // Mean Time To Repair (in minutes)
 
-interface HealingRule {
-  condition: string;
-  action: string;
-  threshold: number;
-  description: string;
-}
+// API基础URL
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9700/api';
 
-const activeIncidents = ref<Incident[]>([]);
-const recentActions = ref<Action[]>([]);
-const healingRules = ref<HealingRule[]>([]);
-const error = ref<string | null>(null);
-const showConfigModal = ref(false);
+// Computed
+const successRate = computed(() => {
+  const total = repairHistory.value.length;
+  if (total === 0) return 100;
+  const successful = repairHistory.value.filter(r => r.status === 'completed').length;
+  return Math.round((successful / total) * 100);
+});
 
-const formatDate = (date: string) => {
-  return new Date(date).toLocaleString();
+// Methods
+const getStatusColor = (status: string): string => {
+  const colors = {
+    diagnosing: 'bg-yellow-500/20 text-yellow-400',
+    repairing: 'bg-blue-500/20 text-blue-400',
+    verifying: 'bg-purple-500/20 text-purple-400',
+    completed: 'bg-green-500/20 text-green-400',
+    failed: 'bg-red-500/20 text-red-400'
+  };
+  return colors[status as keyof typeof colors] || colors.diagnosing;
 };
 
-const fetchIncidents = async () => {
+const formatTime = (time: string): string => {
+  return new Date(time).toLocaleString();
+};
+
+const formatDuration = (minutes: number): string => {
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${hours}h ${mins}m`;
+};
+
+const fetchData = async () => {
   try {
-    error.value = null;
-    const [incidentsResponse, actionsResponse] = await Promise.all([
-      fetch('http://localhost:3000/api/autoheal/incidents'),
-      fetch('http://localhost:3000/api/autoheal/actions')
+    const [activeResponse, historyResponse, statsResponse] = await Promise.all([
+      fetch(`${API_BASE_URL}/autoheal/active`),
+      fetch(`${API_BASE_URL}/autoheal/history`),
+      fetch(`${API_BASE_URL}/autoheal/stats`)
     ]);
 
-    if (!incidentsResponse.ok || !actionsResponse.ok) {
+    if (!activeResponse.ok || !historyResponse.ok || !statsResponse.ok) {
       throw new Error('Failed to fetch auto-heal data');
     }
 
-    activeIncidents.value = await incidentsResponse.json();
-    recentActions.value = await actionsResponse.json();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An error occurred';
-    console.error('Error fetching auto-heal data:', err);
-  }
-};
+    const activeData = await activeResponse.json();
+    const historyData = await historyResponse.json();
+    const statsData = await statsResponse.json();
 
-const startAutoHeal = async (id: string) => {
-  try {
-    error.value = null;
-    const response = await fetch(`http://localhost:3000/api/autoheal/incidents/${id}/start`, {
-      method: 'POST'
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to start auto-heal process');
+    if (activeData.success && historyData.success && statsData.success) {
+      activeRepairs.value = activeData.data;
+      repairHistory.value = historyData.data;
+      totalFixed.value = statsData.data.totalFixed;
+      mttr.value = statsData.data.mttr;
     }
-
-    await fetchIncidents();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An error occurred';
-    console.error('Error starting auto-heal:', err);
-  }
-};
-
-const stopAutoHeal = async (id: string) => {
-  try {
-    error.value = null;
-    const response = await fetch(`http://localhost:3000/api/autoheal/incidents/${id}/stop`, {
-      method: 'POST'
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to stop auto-heal process');
+  } catch (error) {
+    console.error('Error fetching auto-heal data:', error);
+    
+    // 开发环境下使用模拟数据
+    if (import.meta.env.DEV) {
+      generateMockData();
     }
-
-    await fetchIncidents();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An error occurred';
-    console.error('Error stopping auto-heal:', err);
   }
 };
 
-const retryAction = async (id: string) => {
-  try {
-    error.value = null;
-    const response = await fetch(`http://localhost:3000/api/autoheal/actions/${id}/retry`, {
-      method: 'POST'
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to retry action');
+const generateMockData = () => {
+  // Generate mock active repairs
+  activeRepairs.value = [
+    {
+      id: 'repair-1',
+      issue: 'High CPU Usage',
+      service: 'api-gateway',
+      status: 'repairing',
+      progress: 65,
+      startTime: new Date(Date.now() - 15 * 60000).toISOString(),
+      eta: new Date(Date.now() + 10 * 60000).toISOString()
+    },
+    {
+      id: 'repair-2',
+      issue: 'Memory Leak',
+      service: 'auth-service',
+      status: 'diagnosing',
+      progress: 30,
+      startTime: new Date(Date.now() - 5 * 60000).toISOString(),
+      eta: new Date(Date.now() + 25 * 60000).toISOString()
     }
+  ];
 
-    await fetchIncidents();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An error occurred';
-    console.error('Error retrying action:', err);
-  }
+  // Generate mock repair history with proper typing
+  repairHistory.value = Array.from({ length: 10 }, (_, i) => ({
+    id: `history-${i + 1}`,
+    issue: ['Database Connection', 'High Memory Usage', 'Service Crash', 'Network Latency'][Math.floor(Math.random() * 4)],
+    service: ['api-gateway', 'auth-service', 'user-service', 'payment-service'][Math.floor(Math.random() * 4)],
+    status: Math.random() > 0.5 ? 'completed' : 'failed' as const,
+    progress: 100,
+    startTime: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
+    eta: new Date(Date.now()).toISOString(),
+    duration: Math.floor(Math.random() * 120) + 5,
+    fixedAt: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString()
+  }));
+
+  // Generate mock stats
+  totalFixed.value = 127;
+  mttr.value = 23; // 23 minutes average repair time
 };
 
-const fetchRules = async () => {
-  try {
-    error.value = null;
-    const response = await fetch('http://localhost:3000/api/autoheal/rules');
-    if (!response.ok) {
-      throw new Error('Failed to fetch healing rules');
-    }
-    healingRules.value = await response.json();
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An error occurred';
-    console.error('Error fetching healing rules:', err);
-  }
-};
-
-const saveRules = async () => {
-  try {
-    error.value = null;
-    const response = await fetch('http://localhost:3000/api/autoheal/rules', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(healingRules.value),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to save healing rules');
-    }
-
-    showConfigModal.value = false;
-  } catch (err) {
-    error.value = err instanceof Error ? err.message : 'An error occurred';
-    console.error('Error saving healing rules:', err);
-  }
-};
-
-const addRule = () => {
-  healingRules.value.push({
-    condition: 'cpu_high',
-    action: 'restart_service',
-    threshold: 80,
-    description: 'New auto-heal rule',
-  });
-};
-
-const removeRule = (index: number) => {
-  healingRules.value.splice(index, 1);
-};
-
-const openConfigModal = () => {
-  showConfigModal.value = true;
-  fetchRules();
-};
-
+// Initialize
 onMounted(() => {
-  fetchIncidents();
-  // Refresh incidents every 30 seconds
-  const interval = setInterval(fetchIncidents, 30000);
-  onUnmounted(() => clearInterval(interval));
+  fetchData();
+  // Refresh data every 30 seconds
+  setInterval(fetchData, 30000);
 });
 </script> 
