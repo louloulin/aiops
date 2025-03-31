@@ -1,6 +1,6 @@
-# AI OPS Backend
+# AI OPS API
 
-This is the backend service for the AI OPS platform, providing APIs for system metrics collection, log management, deployment tracking, knowledge base management, and auto-healing capabilities.
+This is the API service for the AI OPS platform, providing APIs for system metrics collection, log management, deployment tracking, knowledge base management, and auto-healing capabilities.
 
 ## Setup
 
@@ -72,7 +72,7 @@ The application uses PostgreSQL with the following tables:
 
 ## Development
 
-The backend is built with:
+The API is built with:
 - Hono - Web framework
 - PostgreSQL - Database
 - pgvector - Vector storage for embeddings

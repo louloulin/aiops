@@ -1,0 +1,25 @@
+[install]
+# Use pnpm as the package manager
+exact = true
+dev = true
+pnpm = true
+
+[test]
+# Configure test settings
+coverage = true
+
+[build]
+# Build configuration
+minify = true
+
+[run]
+# Run configuration
+watch = true
+
+[debug]
+# Debug configuration
+breakpoints = true
+
+[dev]
+# Development configuration
+hot = true 

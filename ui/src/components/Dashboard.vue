@@ -85,7 +85,7 @@ const fetchDeployments = async () => {
     if (import.meta.env.DEV) {
       deployments.value = [
         { id: 1, name: 'api-service', version: 'v1.2.3', status: 'success', timestamp: new Date().toISOString() },
-        { id: 2, name: 'frontend', version: 'v2.0.1', status: 'pending', timestamp: new Date().toISOString() },
+        { id: 2, name: 'ui', version: 'v2.0.1', status: 'pending', timestamp: new Date().toISOString() },
         { id: 3, name: 'database', version: 'v1.0.5', status: 'success', timestamp: new Date().toISOString() },
       ];
     }

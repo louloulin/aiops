@@ -1,0 +1,23 @@
+{
+  "name": "aiops",
+  "version": "1.0.0",
+  "description": "AI Operations Platform",
+  "private": true,
+  "workspaces": [
+    "api",
+    "ui"
+  ],
+  "scripts": {
+    "dev": "pnpm --parallel run dev",
+    "build": "pnpm --parallel run build",
+    "lint": "pnpm --parallel run lint",
+    "test": "pnpm --parallel run test"
+  },
+  "keywords": [
+    "ai",
+    "operations",
+    "platform"
+  ],
+  "author": "",
+  "license": "ISC"
+} 

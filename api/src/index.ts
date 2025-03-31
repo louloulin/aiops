@@ -32,7 +32,7 @@ app.use(cors({
 }));
 
 // 健康检查路由
-app.get('/', (c) => c.json({ status: 'ok', message: 'AI OPS 后端服务正常运行' }));
+app.get('/', (c) => c.json({ status: 'ok', message: 'AI OPS API服务正常运行' }));
 
 // API 路由
 app.route('/api/agent', agentRoutes);

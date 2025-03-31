@@ -7,12 +7,11 @@
     "strict": true,
     "skipLibCheck": true,
     "outDir": "dist",
-    "rootDir": "src",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     }
   },
-  "include": ["front/src/**/*","backend/src/**/*"],
+  "include": ["ui/src/**/*","api/src/**/*"],
   "exclude": ["node_modules", "dist"]
 } 

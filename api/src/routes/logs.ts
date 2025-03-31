@@ -107,7 +107,7 @@ app.get('/analysis', async (c: Context) => {
 app.post('/generate-mock', async (c: Context) => {
   try {
     const logLevels = ['error', 'warn', 'info', 'debug'];
-    const services = ['api', 'database', 'auth', 'monitoring', 'frontend'];
+    const services = ['api', 'database', 'auth', 'monitoring', 'ui'];
     const messages = [
       'Application started successfully',
       'Database connection failed',

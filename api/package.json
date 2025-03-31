@@ -1,7 +1,7 @@
 {
-  "name": "aiops-backend",
+  "name": "aiops-api",
   "version": "1.0.0",
-  "description": "Backend service for AI OPS platform",
+  "description": "API service for AI OPS platform",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

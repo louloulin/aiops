@@ -46,7 +46,7 @@ const fetchDeployments = async () => {
 
 // 生成模拟部署数据
 const generateMockDeployments = (): Deployment[] => {
-  const services = ['api-service', 'frontend', 'database', 'cache', 'authentication'];
+  const services = ['api-service', 'ui', 'database', 'cache', 'authentication'];
   const environments = ['production', 'staging', 'development'];
   const statuses: Array<'pending' | 'success' | 'failed'> = ['pending', 'success', 'failed'];
   

@@ -13,14 +13,14 @@ A modern platform for AI-powered DevOps operations, built with Hono, Mastra, Vue
 
 ## Architecture
 
-### Backend
+### API
 
 - **Hono**: Lightweight and fast web framework
 - **Mastra**: AI agent framework for intelligent operations
 - **PostgreSQL**: For persistent storage
 - **pgvector**: Vector database for embeddings
 
-### Frontend
+### UI
 
 - **Vue 3**: Progressive JavaScript framework
 - **TypeScript**: For type safety
@@ -43,33 +43,31 @@ A modern platform for AI-powered DevOps operations, built with Hono, Mastra, Vue
    cd aiops
    ```
 
-2. Install dependencies
+2. Install dependencies with PNPM workspaces
    ```bash
-   # Backend
-   cd backend
-   pnpm install
-   
-   # Frontend
-   cd ../frontend
    pnpm install
    ```
 
 3. Set up environment variables
    ```bash
-   # Backend
-   cd backend
+   # API
+   cd api
    cp .env.example .env
    # Edit .env with your configuration
    ```
 
 4. Start development server
    ```bash
-   # Backend
-   cd backend
+   # Run both API and UI in parallel
    pnpm dev
    
-   # Frontend
-   cd ../frontend
+   # Or run them separately:
+   # API
+   cd api
+   pnpm dev
+   
+   # UI
+   cd ui
    pnpm dev
    ```
 
@@ -77,7 +75,7 @@ A modern platform for AI-powered DevOps operations, built with Hono, Mastra, Vue
 
 ### Completed
 
-- ✅ **System Architecture**: Set up backend with Hono and frontend with Vue
+- ✅ **System Architecture**: Set up api with Hono and ui with Vue
 - ✅ **Metrics Service**: Implemented real-time system metrics collection
 - ✅ **Logs Service**: Implemented log collection and analysis
 - ✅ **Deployment Service**: Implemented deployment tracking and management
@@ -99,20 +97,36 @@ A modern platform for AI-powered DevOps operations, built with Hono, Mastra, Vue
 
 ```
 .
-├── frontend/                # Frontend application
+├── ui/                # UI application
 │   ├── src/
 │   │   ├── components/     # Vue components
 │   │   ├── router/        # Vue Router configuration
 │   │   └── App.vue        # Root component
 │   └── package.json
 │
-└── backend/                # Backend application
+└── api/                # API application
     ├── src/
     │   ├── routes/        # API routes
     │   ├── services/      # Business logic
     │   ├── mastra/        # AI components
     │   └── index.ts       # Entry point
     └── package.json
+```
+
+## Workspace Commands
+
+```bash
+# Run both API and UI
+pnpm dev
+
+# Build both API and UI
+pnpm build
+
+# Run linting
+pnpm lint
+
+# Run tests
+pnpm test
 ```
 
 ## Contributing

@@ -61,7 +61,7 @@ const fetchLogs = async () => {
 // 生成模拟日志
 const generateMockLogs = (): LogEntry[] => {
   const logLevels = ['error', 'warn', 'info', 'debug'];
-  const services = ['api', 'database', 'auth', 'monitoring', 'frontend'];
+  const services = ['api', 'database', 'auth', 'monitoring', 'ui'];
   const messages = [
     'Application started successfully',
     'Database connection failed',
