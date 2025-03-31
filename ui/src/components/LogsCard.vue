@@ -116,7 +116,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="supabase-card p-4 mt-4">
+  <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm p-4 mt-4">
     <div class="flex justify-between items-center mb-4">
       <h2 class="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
         <span>最新日志</span>

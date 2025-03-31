@@ -282,10 +282,10 @@ onMounted(() => {
 
   <!-- Add Data Source Modal -->
   <div v-if="showAddModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-    <div class="bg-gray-800 rounded-lg w-full max-w-2xl overflow-hidden">
-      <div class="px-6 py-4 border-b border-gray-700 flex justify-between items-center">
-        <h3 class="text-xl font-medium text-white">Add Data Source</h3>
-        <button @click="closeAddModal" class="text-gray-400 hover:text-white">
+    <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl overflow-hidden shadow-lg">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white">添加数据源</h3>
+        <button @click="closeAddModal" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -293,42 +293,42 @@ onMounted(() => {
       </div>
       <div class="p-6 space-y-4">
         <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Name</label>
-          <input type="text" class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="My Data Source" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">名称</label>
+          <input type="text" class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="我的数据源" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Type</label>
-          <select class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">类型</label>
+          <select class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
             <option value="prometheus">Prometheus</option>
             <option value="grafana">Grafana</option>
             <option value="elasticsearch">Elasticsearch</option>
             <option value="cloudwatch">CloudWatch</option>
-            <option value="database">Database</option>
-            <option value="custom">Custom</option>
+            <option value="database">数据库</option>
+            <option value="custom">自定义</option>
           </select>
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">URL</label>
-          <input type="text" class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://prometheus.example.com" />
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL</label>
+          <input type="text" class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://prometheus.example.com" />
         </div>
         <div>
-          <label class="block text-sm font-medium text-gray-300 mb-1">Description</label>
-          <textarea class="w-full bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" rows="2" placeholder="Optional description"></textarea>
+          <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">描述</label>
+          <textarea class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" rows="2" placeholder="可选描述"></textarea>
         </div>
         
-        <div class="bg-gray-700 p-4 rounded-lg">
-          <h4 class="text-sm font-medium text-white mb-3">Authentication</h4>
+        <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+          <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-3">认证</h4>
           <div class="space-y-3">
             <div>
-              <label class="block text-sm font-medium text-gray-300 mb-1">API Key</label>
-              <input type="password" class="w-full bg-gray-600 border border-gray-600 rounded-lg py-2 px-4 text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="API Key" />
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API密钥</label>
+              <input type="password" class="w-full bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="API密钥" />
             </div>
           </div>
         </div>
       </div>
-      <div class="px-6 py-4 border-t border-gray-700 flex justify-end gap-3">
-        <button @click="closeAddModal" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg">Cancel</button>
-        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg">Add Data Source</button>
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button @click="closeAddModal" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg">取消</button>
+        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg">添加数据源</button>
       </div>
     </div>
   </div>
