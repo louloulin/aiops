@@ -9,6 +9,7 @@ interface DataSource {
   lastSync: Date;
   description: string;
   metrics: number;
+  url: string;
 }
 
 // State
@@ -17,6 +18,26 @@ const loading = ref(true);
 const searchQuery = ref('');
 const selectedType = ref<string>('all');
 const showAddModal = ref(false);
+const showDeleteConfirm = ref(false);
+const currentDataSource = ref<DataSource | null>(null);
+const isDeleting = ref(false);
+const deleteError = ref<string | null>(null);
+const isTesting = ref(false);
+const testResult = ref<{ success: boolean; message: string; latency: number } | null>(null);
+
+// 新增表单状态
+const formData = ref({
+  name: '',
+  type: 'prometheus' as DataSource['type'],
+  url: '',
+  description: '',
+  apiKey: ''
+});
+const formErrors = ref<Record<string, string>>({});
+const isSubmitting = ref(false);
+const addSuccess = ref(false);
+const addError = ref<string | null>(null);
+const isEditing = ref(false);
 
 // API基础URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:9700/api';
@@ -62,14 +83,16 @@ const generateMockData = () => {
   
   dataSources.value = Array.from({ length: 8 }, (_, i) => {
     const type = types[Math.floor(Math.random() * types.length)] as DataSource['type'];
+    const baseName = `${type.charAt(0).toUpperCase() + type.slice(1)} ${i + 1}`;
     return {
       id: `ds-${i + 1}`,
-      name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${i + 1}`,
+      name: baseName,
       type,
       status: statusOptions[Math.floor(Math.random() * statusOptions.length)] as DataSource['status'],
       lastSync: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000),
       description: `${type.charAt(0).toUpperCase() + type.slice(1)} data source for monitoring system ${i + 1}`,
-      metrics: Math.floor(Math.random() * 1000) + 50
+      metrics: Math.floor(Math.random() * 1000) + 50,
+      url: `https://${type}.example.com/${baseName.toLowerCase().replace(/\s+/g, '-')}`
     };
   });
 };
@@ -121,12 +144,214 @@ const getStatusText = (status: string) => {
   }
 };
 
+// 验证表单数据
+const validateForm = (): boolean => {
+  const errors: Record<string, string> = {};
+  
+  if (!formData.value.name.trim()) {
+    errors.name = '数据源名称不能为空';
+  }
+  
+  if (!formData.value.url.trim()) {
+    errors.url = 'URL不能为空';
+  } else if (!/^https?:\/\/.+/.test(formData.value.url)) {
+    errors.url = '请输入有效的URL（以http://或https://开头）';
+  }
+  
+  formErrors.value = errors;
+  return Object.keys(errors).length === 0;
+};
+
+// 重置表单数据
+const resetForm = () => {
+  formData.value = {
+    name: '',
+    type: 'prometheus',
+    url: '',
+    description: '',
+    apiKey: ''
+  };
+  formErrors.value = {};
+  addSuccess.value = false;
+  addError.value = null;
+};
+
+// 打开添加模态框
 const openAddModal = () => {
+  resetForm();
+  isEditing.value = false;
+  currentDataSource.value = null;
   showAddModal.value = true;
 };
 
+// 关闭模态框
 const closeAddModal = () => {
   showAddModal.value = false;
+  isEditing.value = false;
+  currentDataSource.value = null;
+};
+
+// 打开编辑模态框
+const openEditModal = (dataSource: DataSource) => {
+  currentDataSource.value = dataSource;
+  
+  // 复制数据到表单
+  formData.value = {
+    name: dataSource.name,
+    type: dataSource.type,
+    url: dataSource.url,
+    description: dataSource.description,
+    apiKey: '' // 出于安全考虑，不加载已保存的API密钥
+  };
+  
+  // 重置表单状态
+  formErrors.value = {};
+  addSuccess.value = false;
+  addError.value = null;
+  
+  showAddModal.value = true;
+  isEditing.value = true;
+};
+
+// 修改提交表单函数以支持编辑
+const submitAddForm = async () => {
+  if (!validateForm()) {
+    return;
+  }
+  
+  isSubmitting.value = true;
+  addSuccess.value = false;
+  addError.value = null;
+  
+  try {
+    const payload = {
+      name: formData.value.name,
+      type: formData.value.type,
+      url: formData.value.url,
+      description: formData.value.description,
+      credentials: formData.value.apiKey ? { apiKey: formData.value.apiKey } : undefined
+    };
+    
+    let response;
+    
+    if (isEditing.value && currentDataSource.value) {
+      // 更新现有数据源
+      response = await fetch(`${API_BASE_URL}/datasources/${currentDataSource.value.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+    } else {
+      // 添加新数据源
+      response = await fetch(`${API_BASE_URL}/datasources`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+    }
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || (isEditing.value ? '更新数据源失败' : '添加数据源失败'));
+    }
+    
+    addSuccess.value = true;
+    // 刷新数据源列表
+    fetchDataSources();
+    
+    // 3秒后关闭模态框
+    setTimeout(() => {
+      if (addSuccess.value) {
+        closeAddModal();
+      }
+    }, 3000);
+  } catch (error) {
+    console.error(isEditing.value ? 'Error updating data source:' : 'Error adding data source:', error);
+    addError.value = error instanceof Error ? error.message : (isEditing.value ? '更新数据源时发生错误' : '添加数据源时发生错误');
+  } finally {
+    isSubmitting.value = false;
+  }
+};
+
+// 删除数据源
+const deleteDataSource = async () => {
+  if (!currentDataSource.value) return;
+  
+  isDeleting.value = true;
+  deleteError.value = null;
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/datasources/${currentDataSource.value.id}`, {
+      method: 'DELETE'
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || '删除数据源失败');
+    }
+    
+    // 刷新数据源列表
+    fetchDataSources();
+    // 关闭确认对话框
+    closeDeleteConfirm();
+  } catch (error) {
+    console.error('Error deleting data source:', error);
+    deleteError.value = error instanceof Error ? error.message : '删除数据源时发生错误';
+  } finally {
+    isDeleting.value = false;
+  }
+};
+
+// 打开删除确认对话框
+const openDeleteConfirm = (dataSource: DataSource) => {
+  currentDataSource.value = dataSource;
+  showDeleteConfirm.value = true;
+};
+
+// 关闭删除确认对话框
+const closeDeleteConfirm = () => {
+  showDeleteConfirm.value = false;
+  currentDataSource.value = null;
+  deleteError.value = null;
+};
+
+// 测试数据源连接
+const testConnection = async (dataSource: DataSource) => {
+  currentDataSource.value = dataSource;
+  isTesting.value = true;
+  testResult.value = null;
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/datasources/${dataSource.id}/test`, {
+      method: 'POST'
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || '测试连接失败');
+    }
+    
+    testResult.value = data.test;
+    
+    // 刷新数据源列表以获取最新状态
+    fetchDataSources();
+  } catch (error) {
+    console.error('Error testing connection:', error);
+    testResult.value = {
+      success: false,
+      message: error instanceof Error ? error.message : '测试连接时发生错误',
+      latency: 0
+    };
+  } finally {
+    isTesting.value = false;
+  }
 };
 
 // Initialize
@@ -240,17 +465,30 @@ onMounted(() => {
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex justify-end space-x-2">
-                  <button class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300">
+                  <button 
+                    class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                    title="编辑数据源"
+                    @click="openEditModal(source)"
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                     </svg>
                   </button>
-                  <button class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300">
+                  <button 
+                    class="text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
+                    title="测试连接"
+                    @click="testConnection(source)"
+                    :disabled="isTesting && currentDataSource?.id === source.id"
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
                     </svg>
                   </button>
-                  <button class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300">
+                  <button 
+                    class="text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
+                    title="删除数据源"
+                    @click="openDeleteConfirm(source)"
+                  >
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                       <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
                     </svg>
@@ -284,7 +522,7 @@ onMounted(() => {
   <div v-if="showAddModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
     <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-2xl overflow-hidden shadow-lg">
       <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-        <h3 class="text-xl font-medium text-gray-900 dark:text-white">添加数据源</h3>
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white">{{ isEditing ? '编辑数据源' : '添加数据源' }}</h3>
         <button @click="closeAddModal" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
@@ -292,13 +530,40 @@ onMounted(() => {
         </button>
       </div>
       <div class="p-6 space-y-4">
+        <!-- Success Message -->
+        <div v-if="addSuccess" class="mb-4 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 p-3 rounded-md flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+          </svg>
+          <span>{{ isEditing ? '数据源更新成功！' : '数据源添加成功！' }}</span>
+        </div>
+        
+        <!-- Error Message -->
+        <div v-if="addError" class="mb-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-3 rounded-md flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span>{{ addError }}</span>
+        </div>
+        
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">名称</label>
-          <input type="text" class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="我的数据源" />
+          <input 
+            type="text" 
+            class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            :class="{ 'border-red-500 dark:border-red-500': formErrors.name }"
+            placeholder="我的数据源" 
+            v-model="formData.name" 
+          />
+          <p v-if="formErrors.name" class="mt-1 text-red-500 text-xs">{{ formErrors.name }}</p>
         </div>
+        
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">类型</label>
-          <select class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+          <select 
+            class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            v-model="formData.type"
+          >
             <option value="prometheus">Prometheus</option>
             <option value="grafana">Grafana</option>
             <option value="elasticsearch">Elasticsearch</option>
@@ -307,13 +572,27 @@ onMounted(() => {
             <option value="custom">自定义</option>
           </select>
         </div>
+        
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL</label>
-          <input type="text" class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://prometheus.example.com" />
+          <input 
+            type="text" 
+            class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            :class="{ 'border-red-500 dark:border-red-500': formErrors.url }"
+            placeholder="https://prometheus.example.com" 
+            v-model="formData.url" 
+          />
+          <p v-if="formErrors.url" class="mt-1 text-red-500 text-xs">{{ formErrors.url }}</p>
         </div>
+        
         <div>
           <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">描述</label>
-          <textarea class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" rows="2" placeholder="可选描述"></textarea>
+          <textarea 
+            class="w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+            rows="2" 
+            placeholder="可选描述" 
+            v-model="formData.description"
+          ></textarea>
         </div>
         
         <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
@@ -321,14 +600,145 @@ onMounted(() => {
           <div class="space-y-3">
             <div>
               <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">API密钥</label>
-              <input type="password" class="w-full bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="API密钥" />
+              <input 
+                type="password" 
+                class="w-full bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-600 rounded-lg py-2 px-4 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500" 
+                placeholder="API密钥" 
+                v-model="formData.apiKey" 
+              />
             </div>
           </div>
         </div>
       </div>
       <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
-        <button @click="closeAddModal" class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg">取消</button>
-        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg">添加数据源</button>
+        <button 
+          @click="closeAddModal" 
+          class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg"
+          :disabled="isSubmitting"
+        >
+          取消
+        </button>
+        <button 
+          @click="submitAddForm" 
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center" 
+          :disabled="isSubmitting"
+        >
+          <svg v-if="isSubmitting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {{ isSubmitting ? '处理中...' : (isEditing ? '更新数据源' : '添加数据源') }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Data Source Modal -->
+  <div v-if="showDeleteConfirm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md overflow-hidden shadow-lg">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white">删除数据源</h3>
+        <button @click="closeDeleteConfirm" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <!-- Error Message -->
+        <div v-if="deleteError" class="mb-4 bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 p-3 rounded-md flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+          </svg>
+          <span>{{ deleteError }}</span>
+        </div>
+        
+        <div class="text-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          <p class="text-xl font-medium text-gray-900 dark:text-white mt-4">确定要删除吗？</p>
+          <p class="text-sm text-gray-500 dark:text-gray-400 mt-2">
+            您确定要删除数据源 "{{ currentDataSource?.name }}"？<br />此操作无法撤销。
+          </p>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-3">
+        <button 
+          @click="closeDeleteConfirm" 
+          class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg"
+          :disabled="isDeleting"
+        >
+          取消
+        </button>
+        <button 
+          @click="deleteDataSource" 
+          class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-lg flex items-center"
+          :disabled="isDeleting"
+        >
+          <svg v-if="isDeleting" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          {{ isDeleting ? '删除中...' : '删除' }}
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Test Connection Modal -->
+  <div v-if="testResult && currentDataSource" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-md overflow-hidden shadow-lg">
+      <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white">连接测试结果</h3>
+        <button @click="testResult = null; currentDataSource = null;" class="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div class="p-6 space-y-4">
+        <div class="text-center">
+          <div v-if="testResult.success" class="mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-xl font-medium text-gray-900 dark:text-white mt-4">连接成功</p>
+          </div>
+          <div v-else class="mb-4">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-xl font-medium text-gray-900 dark:text-white mt-4">连接失败</p>
+          </div>
+          
+          <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg text-left">
+            <div class="flex justify-between mb-2">
+              <span class="text-sm text-gray-500 dark:text-gray-400">数据源:</span>
+              <span class="text-sm font-medium text-gray-900 dark:text-white">{{ currentDataSource.name }}</span>
+            </div>
+            <div class="flex justify-between mb-2">
+              <span class="text-sm text-gray-500 dark:text-gray-400">URL:</span>
+              <span class="text-sm font-medium text-gray-900 dark:text-white">{{ currentDataSource.url || 'N/A' }}</span>
+            </div>
+            <div class="flex justify-between mb-2">
+              <span class="text-sm text-gray-500 dark:text-gray-400">响应时间:</span>
+              <span class="text-sm font-medium text-gray-900 dark:text-white">{{ testResult.latency }}ms</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-sm text-gray-500 dark:text-gray-400">消息:</span>
+              <span class="text-sm font-medium text-gray-900 dark:text-white">{{ testResult.message }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-end">
+        <button 
+          @click="testResult = null; currentDataSource = null;" 
+          class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg"
+        >
+          关闭
+        </button>
       </div>
     </div>
   </div>

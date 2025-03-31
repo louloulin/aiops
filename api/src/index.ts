@@ -19,6 +19,7 @@ import { deployRoutes } from './routes/deploy';
 import { autohealRoutes } from './routes/autoheal';
 import { knowledgeRoutes } from './routes/knowledge';
 import businessMetricsRoutes from './routes/business-metrics';
+import datasourcesRoutes from './routes/datasources';
 import { monitoringAgent } from './agents/monitoringAgent';
 import { logAnalysisAgent } from './agents/logAnalysisAgent';
 import { autoHealingAgent } from './agents/autoHealingAgent';
@@ -55,6 +56,7 @@ app.route('/api/deploy', deployRoutes);
 app.route('/api/autoheal', autohealRoutes);
 app.route('/api/knowledge', knowledgeRoutes);
 app.route('/api/business-metrics', businessMetricsRoutes);
+app.route('/api/datasources', datasourcesRoutes);
 
 // 添加数据库路由
 app.get('/api/health', async (c) => {
