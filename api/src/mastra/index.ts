@@ -1,25 +1,72 @@
 import { Mastra } from '@mastra/core';
-import { openai } from '@ai-sdk/openai';
+import { Memory } from '@mastra/memory';
+import path from 'path';
+import fs from 'fs';
+import { createQwen } from 'qwen-ai-provider';
 
-// Initialize the OpenAI client with API key from environment
-export const openaiClient = openai(process.env.OPENAI_API_KEY as string);
+const qwen = createQwen({
+ 
+  baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+  apiKey:'sk-bc977c4e31e542f1a34159cb42478198',
+});
+export const qw =  qwen('qwen-plus-2025-01-12');
+// 初始化OpenAI客户端
+
+// 简单内存存储的消息历史
+const messageHistoryStore: Record<string, any[]> = {};
+
+// 创建通用的内存实例，使用自定义的内存存储实现
+export const memoryInstance = new Memory({
+  options: {
+    lastMessages: 30,
+    workingMemory: { enabled: true },
+  }
+});
+
+// 初始化Mastra数据结构 - 使用最简单的实现方式
+export async function initializeMastraStorage() {
+  try {
+    // 确保数据目录存在
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+    }
+    
+    console.log('使用纯内存模式运行聊天系统，不依赖SQLite');
+    
+    return true;
+  } catch (error) {
+    console.error('Mastra初始化失败:', error);
+    return false;
+  }
+}
+
+// 自定义消息历史存储函数
+export function saveMessageToHistory(conversationId: string, message: any) {
+  if (!messageHistoryStore[conversationId]) {
+    messageHistoryStore[conversationId] = [];
+  }
+  messageHistoryStore[conversationId].push({
+    ...message,
+    timestamp: message.timestamp || new Date().toISOString()
+  });
+}
+
+// 获取消息历史
+export function getMessageHistory(conversationId: string) {
+  return messageHistoryStore[conversationId] || [];
+}
+
+
+// 常见的聊天响应
+export const defaultResponses = {
+  greeting: "您好，我是AI助手。有什么可以帮您的？",
+  error: "抱歉，处理您的请求时出现了错误。请稍后再试。",
+  noApiKey: "系统未配置API密钥，暂时无法使用AI功能。请联系管理员配置API密钥。"
+};
 
 // Create Mastra instance for various agents to use
 export const mastra = new Mastra();
-
-// Helper function to create a new OpenAI client with different settings
-export function createOpenAIClient(options?: {
-  model?: string;
-  temperature?: number;
-  maxTokens?: number;
-}) {
-  return {
-    client: openaiClient,
-    model: options?.model || process.env.OPENAI_MODEL || 'gpt-4o',
-    temperature: options?.temperature || 0.7,
-    maxTokens: options?.maxTokens,
-  };
-}
 
 // Constants for prompt types
 export const PROMPT_TYPES = {

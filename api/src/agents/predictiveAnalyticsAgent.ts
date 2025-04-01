@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { openaiClient } from "../mastra";
+import { qw } from "../mastra";
 import { db } from "../db";
 
 /**
@@ -27,7 +27,7 @@ export const predictiveAnalyticsAgent = new Agent({
     - 异常检测应关注超出正常范围的指标值
     - 优化建议应具体、可操作，并针对检测到的问题
     - 分析报告应清晰、专业，易于运维人员理解`,
-  model: openaiClient,
+  model: qw,
   // 简化工具导入，避免类型错误
   tools: {},
 });

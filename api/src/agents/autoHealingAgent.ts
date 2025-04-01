@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { openaiClient, PROMPTS, PROMPT_TYPES } from "../mastra";
+import { qw, PROMPTS, PROMPT_TYPES } from "../mastra";
 import { autoHealingTools } from "../tools/autoHealingTools";
 
 /**
@@ -33,7 +33,7 @@ export interface RemediationResult {
 export const autoHealingAgent = new Agent({
   name: "Auto-Healing Agent",
   instructions: PROMPTS[PROMPT_TYPES.AUTO_HEALING],
-  model: openaiClient,
+  model: qw,
   tools: autoHealingTools,
 });
 

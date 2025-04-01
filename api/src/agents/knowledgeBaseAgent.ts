@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent';
-import { openaiClient, PROMPTS, PROMPT_TYPES } from '../mastra';
+import { qw, PROMPTS, PROMPT_TYPES } from '../mastra';
 import { knowledgeBaseTools } from '../tools/knowledgeBaseTools';
 
 /**
@@ -11,7 +11,7 @@ import { knowledgeBaseTools } from '../tools/knowledgeBaseTools';
 export const knowledgeBaseAgent = new Agent({
   name: 'Knowledge Base Agent',
   instructions: PROMPTS[PROMPT_TYPES.KNOWLEDGE_BASE],
-  model: openaiClient,
+  model: qw,
   tools: knowledgeBaseTools,
 });
 

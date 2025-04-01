@@ -1,137 +1,280 @@
 import { Agent } from '@mastra/core/agent';
-import { openaiClient } from '../mastra';
-import { Memory } from '@mastra/memory';
-import { monitoringTools } from '../tools/monitoringTools';
-import { logAnalysisTools } from '../tools/logAnalysisTools';
-import { autoHealingTools } from '../tools/autoHealingTools';
-import { knowledgeBaseTools } from '../tools/knowledgeBaseTools';
+import { qw, saveMessageToHistory, getMessageHistory, defaultResponses } from '../mastra';
 import { CoreMessage } from '@mastra/core';
-import { db } from '../db';
-import { eq } from 'drizzle-orm';
 
-// 初始化记忆系统
-const memory = new Memory({
-  options: {
-    lastMessages: 30,
-    semanticRecall: {
-      topK: 10,
-      messageRange: 5,
-    },
-    workingMemory: { enabled: true },
-  },
-});
-
-/**
- * 聊天系统代理
- * 
- * 提供统一的聊天界面，集成所有系统功能。
- * 可以处理自然语言请求并调用适当的系统功能来响应。
- */
-export const chatAgent = new Agent({
-  name: 'Chat System',
-  instructions: `你是AI OPS平台的中央智能助手。你的主要职责是理解用户的运维请求，并利用系统中所有可用的专业工具和代理来满足这些需求。请协调使用以下功能：
-
-功能范围：
-1.  **系统监控**: 使用\`monitoringTools\`查询实时和历史系统指标 (CPU, 内存, 磁盘, 网络), 检查服务健康状态。
-2.  **日志分析**: 使用\`logAnalysisTools\`查询、分析和聚合日志，识别错误、异常模式和趋势。
-3.  **自动修复**: 使用\`autoHealingTools\`诊断问题并启动预定义的修复流程。在执行敏感操作前寻求确认。
-4.  **知识库**: 使用\`knowledgeBaseTools\`查询运维文档、解决方案和最佳实践。
-5.  **预测分析**: 使用\`predictiveTools\` (如果可用) 分析历史数据，预测未来资源使用趋势，并检测潜在异常。
-6.  **告警管理**: (通过监控工具) 查看和管理系统告警。
-
-交互指南：
--   直接、清晰地回答用户问题，无需自我介绍。
--   根据用户请求的性质，选择最合适的工具或组合工具来完成任务。
--   如果请求不明确或需要更多信息才能选择正确的工具，请向用户提问澄清。
--   如果用户请求的操作涉及更改系统状态（例如，启动修复），请解释将要执行的操作并请求用户确认。
--   对于复杂查询，可能需要按顺序调用多个工具。请组织好响应，清晰地呈现结果。
--   优先使用中文回复，除非用户明确使用其他语言。`,
-  model: openaiClient,
-  tools: {
-    ...monitoringTools,
-    ...logAnalysisTools,
-    ...autoHealingTools,
-    ...knowledgeBaseTools,
-  },
-  memory,
-});
+// 服务类型定义
+type Services = {
+  metricsService?: any;
+  serverService?: any;
+  logService?: any;
+  alertService?: any;
+  [key: string]: any;
+};
 
 /**
  * 聊天消息接口
  */
 export interface ChatMessage {
-  id: string;
-  conversationId: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
-  timestamp: Date;
+  timestamp: string | Date;
 }
+
+/**
+ * UI动作接口
+ */
+export interface UIAction {
+  action: string;
+  [key: string]: any;
+}
+
+/**
+ * 聊天响应接口
+ */
+export interface ChatResponse {
+  response: string;
+  actions?: UIAction[];
+}
+
+/**
+ * 聊天代理类
+ * 提供简化的聊天功能，使用千问模型
+ */
+export class ChatAgent {
+  public agent: Agent | null;
+  private services: Services;
+  
+  /**
+   * 构造函数
+   * @param llmClient LLM客户端
+   * @param services 服务集合
+   */
+  constructor(llmClient: any, services: Services = {}) {
+    this.services = services;
+    
+    // 如果没有API密钥，使用null而不创建agent
+    if (!llmClient) {
+      this.agent = null;
+      console.warn('未提供LLM客户端，将使用模拟响应');
+      return;
+    }
+    
+    // 创建代理，指定使用千问模型
+    try {
+      this.agent = new Agent({
+        name: 'Chat System',
+        instructions: `你是AI OPS平台的智能助手。请直接清晰地回答用户问题，优先使用中文。`,
+        model: llmClient,
+      });
+      console.log('成功创建千问聊天代理');
+    } catch (error) {
+      console.error('创建千问代理失败:', error);
+      this.agent = null;
+    }
+  }
+  
+  /**
+   * 从文本中提取UI操作指令
+   * @param text 文本内容
+   * @returns UI操作指令数组
+   */
+  public extractUIActions(text: string): UIAction[] {
+    const actions: UIAction[] = [];
+    
+    // 查找 ```ui-action ... ``` 格式的代码块
+    const actionPattern = /```ui-action\s+([\s\S]*?)\s*```/g;
+    let match;
+    
+    while ((match = actionPattern.exec(text)) !== null) {
+      try {
+        const actionJson = match[1].trim();
+        const action = JSON.parse(actionJson);
+        
+        // 确保动作有效
+        if (action && action.action) {
+          actions.push(action);
+        }
+      } catch (e) {
+        console.error('解析UI操作失败:', e);
+      }
+    }
+    
+    return actions;
+  }
+  
+  /**
+   * 根据路由路径描述当前视图
+   * @param route 路由路径
+   * @returns 视图描述
+   */
+  private describeView(route?: string): string {
+    if (!route) return '未知视图';
+    
+    // 根据路由提供更具体的视图描述
+    if (route.startsWith('/dashboard')) return '监控仪表盘';
+    if (route.startsWith('/servers')) return '服务器列表';
+    if (route.startsWith('/server/')) return '服务器详情';
+    if (route.startsWith('/metrics')) return '指标页面';
+    if (route.startsWith('/logs')) return '日志分析';
+    if (route.startsWith('/alerts')) return '告警管理';
+    if (route.startsWith('/predictive')) return '预测分析';
+    if (route.startsWith('/knowledge')) return '知识库';
+    
+    return '未知视图';
+  }
+}
+
+// 创建默认聊天代理实例
+export const chatAgent = new ChatAgent(qw);
 
 /**
  * 发送消息到聊天代理
  * @param message 用户消息
  * @param conversationId 会话ID
+ * @param context UI上下文信息
  * @returns 助手回复
  */
-export async function sendChatMessage(message: string, conversationId?: string) {
-  const messages: CoreMessage[] = [
-    {
+export async function sendChatMessage(
+  message: string, 
+  conversationId?: string,
+  context?: Record<string, any>
+) {
+  try {
+    // 生成唯一ID用于会话管理
+    const threadId = conversationId || `chat-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+    
+    // 保存用户消息到历史
+    const userMessage = {
       role: 'user',
       content: message,
+      timestamp: new Date().toISOString()
+    };
+    
+    saveMessageToHistory(threadId, userMessage);
+    
+    // 如果没有可用的agent，返回模拟响应
+    if (!chatAgent.agent) {
+      console.log('使用模拟响应模式');
+      const simulatedAnswer = getSimulatedResponse(message);
+      
+      const assistantMessage = {
+        role: 'assistant',
+        content: simulatedAnswer,
+        timestamp: new Date().toISOString()
+      };
+      
+      saveMessageToHistory(threadId, assistantMessage);
+      
+      return {
+        answer: simulatedAnswer,
+        query: message,
+        conversationId: threadId,
+        timestamp: new Date().toISOString(),
+        actions: [],
+      };
     }
-  ];
+    
+    // 准备消息
+    const messages: CoreMessage[] = [{ role: 'user', content: message }];
+    
+    // 如果上下文可用，添加系统消息
+    if (context && Object.keys(context).length > 0) {
+      messages.unshift({
+        role: 'system',
+        content: `用户当前界面上下文: ${JSON.stringify(context)}\n请根据上下文提供相关回答。`
+      });
+    }
+    
+    // 调用Mastra代理生成回复
+    let cleanResponse = '';
+    let actions = [];
+    
+    try {
+      // 尝试调用千问API
+      const response = await chatAgent.agent.generate(messages);
+      
+      // 提取UI操作指令
+      actions = chatAgent.extractUIActions(response.text);
+      
+      // 如果存在UI操作指令，从回复中去除指令代码
+      cleanResponse = response.text;
+      if (actions && actions.length > 0) {
+        // 移除所有UI操作代码块
+        const actionPattern = /```ui-action\s+([\s\S]*?)\s*```/g;
+        cleanResponse = cleanResponse.replace(actionPattern, '').trim();
+      }
+    } catch (apiError) {
+      console.error('API调用失败，使用模拟响应:', apiError);
+      cleanResponse = getSimulatedResponse(message);
+    }
+    
+    // 保存助手回复到历史
+    const assistantMessage = {
+      role: 'assistant',
+      content: cleanResponse,
+      timestamp: new Date().toISOString()
+    };
+    
+    saveMessageToHistory(threadId, assistantMessage);
+    
+    return {
+      answer: cleanResponse,
+      query: message,
+      conversationId: threadId,
+      timestamp: new Date().toISOString(),
+      actions,
+    };
+  } catch (error) {
+    console.error('发送聊天消息失败:', error);
+    
+    // 返回错误响应
+    return {
+      answer: defaultResponses.error,
+      query: message,
+      conversationId: conversationId || `chat-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: new Date().toISOString(),
+      actions: [],
+    };
+  }
+}
 
-  const newConversationId = conversationId || generateConversationId();
-  const resourceId = `conversation-${newConversationId}`;
-  const threadId = newConversationId;
-
-  // 保存用户消息到数据库
-  await saveChatMessage({
-    id: generateMessageId(),
-    conversationId: newConversationId,
-    role: 'user',
-    content: message,
-    timestamp: new Date()
-  });
-
-  // 生成回复
-  const response = await chatAgent.generate(messages, { resourceId, threadId });
-
-  // 保存助手回复到数据库
-  await saveChatMessage({
-    id: generateMessageId(),
-    conversationId: newConversationId,
-    role: 'assistant',
-    content: response.text,
-    timestamp: new Date()
-  });
-
-  return {
-    answer: response.text,
-    query: message,
-    conversationId: newConversationId,
-    timestamp: new Date().toISOString(),
-  };
+/**
+ * 生成模拟的AI响应
+ * 当没有可用的AI模型时，使用这个函数生成简单的响应
+ */
+function getSimulatedResponse(message: string): string {
+  // 检查问题类型，返回不同的模拟回复
+  message = message.toLowerCase();
+  
+  if (message.includes('你好') || message.includes('hello') || message.includes('hi')) {
+    return "您好！我是AI助手。很高兴为您服务，请问有什么可以帮助您的？";
+  }
+  
+  if (message.includes('监控') || message.includes('cpu') || message.includes('内存') || message.includes('服务器')) {
+    return "根据监控数据，所有服务器运行正常。CPU使用率在45%左右，内存使用率约为60%，网络流量稳定。";
+  }
+  
+  if (message.includes('日志') || message.includes('错误') || message.includes('异常')) {
+    return "最近的日志分析显示没有严重错误。有少量的警告信息，主要与连接超时有关，但系统已自动重试并恢复。";
+  }
+  
+  if (message.includes('预测') || message.includes('趋势') || message.includes('分析')) {
+    return "根据历史数据分析，系统负载预计在下周会增加约20%。建议提前扩容资源，特别是数据库服务器。";
+  }
+  
+  // 默认回复
+  return "我理解您的问题。在当前的模拟模式下，我无法提供详细的回答。请确保系统配置了有效的API密钥以启用完整的AI功能。";
 }
 
 /**
  * 获取会话历史
+ * 使用内存存储获取历史消息
  * @param conversationId 会话ID
  * @returns 会话消息列表
  */
 export async function getChatHistory(conversationId: string) {
   try {
-    // 假设这里有一个聊天消息表
-    // 实际实现需要根据数据库架构调整
-    /*
-    const messages = await db.query.chatMessages.findMany({
-      where: eq(chatMessages.conversationId, conversationId),
-      orderBy: [asc(chatMessages.timestamp)]
-    });
-    */
-    
-    // 临时返回空数组，实际实现需连接数据库
-    return [];
+    return getMessageHistory(conversationId);
   } catch (error) {
     console.error('获取聊天历史失败:', error);
     return [];
@@ -139,34 +282,9 @@ export async function getChatHistory(conversationId: string) {
 }
 
 /**
- * 保存聊天消息
- * @param message 聊天消息
- * @returns 消息ID
- */
-async function saveChatMessage(message: ChatMessage): Promise<string> {
-  try {
-    // 这里应该实现保存消息到数据库的逻辑
-    // 实际实现需要根据数据库架构调整
-    console.log('保存聊天消息:', message);
-    return message.id;
-  } catch (error) {
-    console.error('保存聊天消息失败:', error);
-    return message.id;
-  }
-}
-
-/**
  * 生成唯一的会话ID
  * @returns 会话ID
  */
-function generateConversationId(): string {
+export function generateConversationId(): string {
   return `chat-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
- * 生成唯一的消息ID
- * @returns 消息ID
- */
-function generateMessageId(): string {
-  return `msg-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 } 

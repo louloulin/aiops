@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { openaiClient, PROMPTS, PROMPT_TYPES } from "../mastra";
+import { qw, PROMPTS, PROMPT_TYPES } from "../mastra";
 import { logAnalysisTools } from "../tools/logAnalysisTools";
 
 /**
@@ -20,7 +20,7 @@ export interface LogEntry {
 export const logAnalysisAgent = new Agent({
   name: "Log Analysis Agent",
   instructions: PROMPTS[PROMPT_TYPES.LOG_ANALYSIS],
-  model: openaiClient,
+  model: qw,
   tools: logAnalysisTools,
 });
 

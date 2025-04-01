@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent';
-import { openaiClient, PROMPTS, PROMPT_TYPES } from '../mastra';
+import { qw, PROMPTS, PROMPT_TYPES } from '../mastra';
 import { Memory } from '@mastra/memory';
 import { monitoringTools } from '../tools/monitoringTools';
 import { logAnalysisTools } from '../tools/logAnalysisTools';
@@ -28,7 +28,7 @@ const memory = new Memory({
 export const opsAssistant = new Agent({
   name: 'OPS Assistant',
   instructions: PROMPTS[PROMPT_TYPES.OPS_ASSISTANT],
-  model: openaiClient,
+  model: qw,
   tools: {
     ...monitoringTools,
     ...logAnalysisTools,

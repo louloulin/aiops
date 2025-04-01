@@ -27,6 +27,9 @@
         "nodemailer": "^6.9.12",
         "openai": "^4.89.0",
         "pg": "^8.14.1",
+        "pino": "9.6.0",
+        "pino-pretty": "13.0.0",
+        "qwen-ai-provider": "0.1.0",
         "redis": "^4.7.0",
         "supertest": "7.1.0",
         "vitest": "3.1.1",
@@ -2413,6 +2416,8 @@
     "queue-microtask": ["queue-microtask@1.2.3", "https://registry.npmmirror.com/queue-microtask/-/queue-microtask-1.2.3.tgz", {}, "sha512-NuaNSa6flKT5JaSYQzJok04JzTL1CA6aGhv5rfLW3PgqA+M2ChpZQnAC8h8i4ZFkBS8X5RqkDBHA7r4hej3K9A=="],
 
     "quick-format-unescaped": ["quick-format-unescaped@4.0.4", "https://registry.npmmirror.com/quick-format-unescaped/-/quick-format-unescaped-4.0.4.tgz", {}, "sha512-tYC1Q1hgyRuHgloV/YXs2w15unPVh8qfu/qCTfhTYamaw7fyhumKa2yGpdSo87vY32rIclj+4fWYQXUMs9EHvg=="],
+
+    "qwen-ai-provider": ["qwen-ai-provider@0.1.0", "https://registry.npmmirror.com/qwen-ai-provider/-/qwen-ai-provider-0.1.0.tgz", { "dependencies": { "@ai-sdk/provider": "^1.0.7", "@ai-sdk/provider-utils": "^2.1.6" }, "peerDependencies": { "zod": "^3.24.1" } }, "sha512-ylzb71U0WreJPyNOHJTwXvE9+jVSsFhnam5aDfB7hBSUuEajYFIGcvhhuQUgUE43OIpxINMgGHKSicpwJ8x/XQ=="],
 
     "radash": ["radash@12.1.0", "https://registry.npmmirror.com/radash/-/radash-12.1.0.tgz", {}, "sha512-b0Zcf09AhqKS83btmUeYBS8tFK7XL2e3RvLmZcm0sTdF1/UUlHSsjXdCcWNxe7yfmAlPve5ym0DmKGtTzP6kVQ=="],
 
