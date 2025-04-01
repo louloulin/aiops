@@ -36,7 +36,7 @@ import { chatAgent } from './agents/chatAgent';
 import { monitoringAgent } from './agents/monitoringAgent';
 import { logAnalysisAgent } from './agents/logAnalysisAgent';
 import { autoHealingAgent } from './agents/autoHealingAgent';
-import { knowledgeBaseAgent } from './agents/knowledgeBaseAgent';
+// import { knowledgeBaseAgent } from './agents/knowledgeBaseAgent';
 import { opsAssistant } from './agents/opsAssistant';
 
 // 导入数据库服务
@@ -163,7 +163,6 @@ export const agents = {
   monitoringAgent,
   logAnalysisAgent,
   autoHealingAgent,
-  knowledgeBaseAgent,
   opsAssistant,
   chatAgent,
 };
@@ -175,7 +174,10 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 const startServer = async () => {
   try {
     // 初始化Mastra存储
-    await initializeMastraStorage();
+    const mastraInitialized = await initializeMastraStorage();
+    if (!mastraInitialized) {
+      console.error('Mastra存储初始化失败，使用内存缓存作为备选方案');
+    }
     
     // 运行数据库迁移（可选，生产环境可以禁用）
     if (process.env.RUN_MIGRATIONS === 'true') {

@@ -5,25 +5,31 @@ import fs from 'fs';
 import { createQwen } from 'qwen-ai-provider';
 
 const qwen = createQwen({
- 
   baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
   apiKey:'sk-bc977c4e31e542f1a34159cb42478198',
 });
-export const qw =  qwen('qwen-plus-2025-01-12');
-// 初始化OpenAI客户端
 
-// 简单内存存储的消息历史
-const messageHistoryStore: Record<string, any[]> = {};
+export const qw = qwen('qwen-plus-2025-01-12');
 
-// 创建通用的内存实例，使用自定义的内存存储实现
+// 创建高级内存实例
 export const memoryInstance = new Memory({
   options: {
     lastMessages: 30,
-    workingMemory: { enabled: true },
+    semanticRecall: {
+      topK: 3,
+      messageRange: 5,
+    },
+    workingMemory: { 
+      enabled: true,
+      maxSize: 100
+    },
   }
 });
 
-// 初始化Mastra数据结构 - 使用最简单的实现方式
+// 初始化Mastra实例 - 不再传入内存配置
+export const mastra = new Mastra();
+
+// 初始化Mastra数据结构
 export async function initializeMastraStorage() {
   try {
     // 确保数据目录存在
@@ -32,8 +38,7 @@ export async function initializeMastraStorage() {
       fs.mkdirSync(dataDir, { recursive: true });
     }
     
-    console.log('使用纯内存模式运行聊天系统，不依赖SQLite');
-    
+    console.log('Mastra存储系统初始化成功');
     return true;
   } catch (error) {
     console.error('Mastra初始化失败:', error);
@@ -41,32 +46,12 @@ export async function initializeMastraStorage() {
   }
 }
 
-// 自定义消息历史存储函数
-export function saveMessageToHistory(conversationId: string, message: any) {
-  if (!messageHistoryStore[conversationId]) {
-    messageHistoryStore[conversationId] = [];
-  }
-  messageHistoryStore[conversationId].push({
-    ...message,
-    timestamp: message.timestamp || new Date().toISOString()
-  });
-}
-
-// 获取消息历史
-export function getMessageHistory(conversationId: string) {
-  return messageHistoryStore[conversationId] || [];
-}
-
-
 // 常见的聊天响应
 export const defaultResponses = {
   greeting: "您好，我是AI助手。有什么可以帮您的？",
   error: "抱歉，处理您的请求时出现了错误。请稍后再试。",
   noApiKey: "系统未配置API密钥，暂时无法使用AI功能。请联系管理员配置API密钥。"
 };
-
-// Create Mastra instance for various agents to use
-export const mastra = new Mastra();
 
 // Constants for prompt types
 export const PROMPT_TYPES = {

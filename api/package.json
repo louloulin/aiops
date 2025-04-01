@@ -26,6 +26,7 @@
     "@mastra/memory": "^0.2.4",
     "@mastra/pg": "^0.2.4",
     "@mastra/rag": "^0.1.12",
+    "@mastra/vector-libsql": "0.1.0-alpha.24",
     "@types/pg": "^8.11.11",
     "@types/supertest": "6.0.3",
     "cron": "^3.1.6",

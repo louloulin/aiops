@@ -219,34 +219,58 @@ async function sendMessage(content: string) {
     console.log('当前UI上下文:', context);
     
     const apiBaseUrl = import.meta.env.VITE_API_URL || '';
-    // 不使用流式API，改用普通API简化实现
     const endpoint = '/chat/send';
     
-    // 常规HTTP请求
-    const response = await axios.post(`${apiBaseUrl}${endpoint}`, {
-      message: trimmedContent,
-      conversationId: conversationId.value,
-      context: context // 将UI上下文发送到API
-    });
+    // 创建EventSource连接
+    const eventSource = new EventSource(`${apiBaseUrl}${endpoint}?message=${encodeURIComponent(trimmedContent)}&conversationId=${conversationId.value || ''}`);
     
-    conversationId.value = response.data.conversationId;
-    
+    // 创建新的助手消息
     const assistantMessage: Message = {
       id: `msg-${Date.now()}-assistant`,
       role: 'assistant',
-      content: response.data.response,
-      timestamp: new Date(response.data.timestamp || Date.now())
+      content: '',
+      timestamp: new Date()
     };
     messages.value.push(assistantMessage);
     
-    // 处理UI动作
-    if (response.data.actions && Array.isArray(response.data.actions)) {
-      response.data.actions.forEach((action: any) => {
-        executeUIAction(action);
-      });
-    }
+    // 处理流式响应
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.error) {
+          console.error('接收到错误:', data.error);
+          toast.error(data.error);
+          eventSource.close();
+          return;
+        }
+        
+        if (data.type === 'chunk') {
+          // 更新最后一条助手消息的内容
+          assistantMessage.content += data.content;
+          if (data.conversationId) {
+            conversationId.value = data.conversationId;
+          }
+          scrollToBottom();
+        } else if (data.type === 'done') {
+          console.log(`聊天完成，处理时间: ${data.processTime}ms`);
+          eventSource.close();
+          isTyping.value = false;
+        }
+      } catch (error) {
+        console.error('处理消息时出错:', error);
+        toast.error('处理消息时出错');
+        eventSource.close();
+      }
+    };
     
-    isTyping.value = false;
+    eventSource.onerror = (error) => {
+      console.error('EventSource错误:', error);
+      toast.error('连接错误，请重试');
+      eventSource.close();
+      isTyping.value = false;
+    };
+    
   } catch (error) {
     console.error('发送消息失败:', error);
     toast.error('消息发送失败，请重试');
