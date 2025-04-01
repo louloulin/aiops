@@ -2,6 +2,9 @@
 import { ref, onMounted, onUnmounted } from 'vue';
 import Chart from 'chart.js/auto';
 import { API_BASE_URL } from '../config';
+import { useRouter } from 'vue-router';
+
+const router = useRouter();
 
 // 图表引用
 const cpuChart = ref(null);
@@ -303,6 +306,11 @@ const stopAutoRefresh = () => {
   }
 };
 
+// 刷新所有数据
+const refreshData = async () => {
+  await fetchMetrics();
+};
+
 // 组件加载时获取数据
 onMounted(() => {
   fetchMetrics();
@@ -338,46 +346,18 @@ onUnmounted(() => {
 
 <template>
   <div class="p-4">
-    <div class="flex justify-between items-center mb-4">
-      <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">系统指标监控</h1>
-      <div class="flex space-x-2">
+    <div class="flex justify-between items-center">
+      <h1 class="text-2xl font-bold">系统监控</h1>
+      <div class="flex gap-2">
+        <router-link to="/metrics/analysis" class="px-3 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600 flex items-center gap-1">
+          <span>深入分析</span>
+        </router-link>
         <button 
-          @click="fetchMetrics" 
-          class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg flex items-center">
-          <svg v-if="loading" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          刷新
-        </button>
-        <button 
-          @click="analyzeMetrics" 
-          class="px-3 py-1.5 bg-green-600 hover:bg-green-500 text-white rounded-lg flex items-center"
+          @click="refreshData" 
+          class="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1"
           :disabled="loading">
-          <svg v-if="analyzing" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-          </svg>
-          分析
-        </button>
-        <button 
-          @click="generateMockData" 
-          class="px-3 py-1.5 bg-gray-600 hover:bg-gray-500 text-white rounded-lg flex items-center"
-          :disabled="generating">
-          <svg v-if="generating" class="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v-4m0 8 4 4m-8 0-4-4m8-12V3" />
-          </svg>
-          生成模拟数据
+          <span v-if="loading" class="animate-spin">⟳</span>
+          <span>刷新</span>
         </button>
       </div>
     </div>

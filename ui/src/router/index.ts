@@ -48,6 +48,16 @@ const routes = [
     component: () => import('../views/MetricsView.vue'),
   },
   {
+    path: '/metrics/analysis',
+    name: 'MetricsAnalysis',
+    component: () => import('../views/MetricsAnalysisView.vue'),
+  },
+  {
+    path: '/services',
+    name: 'ServicesHealth',
+    component: () => import('../views/ServicesHealthView.vue'),
+  },
+  {
     path: '/logs',
     name: 'Logs',
     component: () => import('../views/LogsView.vue'),
@@ -81,6 +91,16 @@ const routes = [
     path: '/business-metrics/:id',
     name: 'BusinessMetricDetails',
     component: () => import('../components/business/BusinessMetricDetails.vue'),
+  },
+  {
+    path: '/alerts',
+    name: 'Alerts',
+    component: () => import('../views/AlertsView.vue'),
+  },
+  {
+    path: '/schedules',
+    name: 'Schedules',
+    component: () => import('../views/SchedulesView.vue'),
   },
   {
     path: '/dashboards',
