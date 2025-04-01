@@ -11,6 +11,7 @@ import { monitoringTools } from "../agents/monitoringAgent";
 import { db } from '../db/drizzle';
 import { systemMetrics } from '../db/schema/metrics';
 import { desc, avg, sql, count } from 'drizzle-orm';
+import { metricCollector } from '../services/metricCollector';
 
 const app = new Hono();
 
@@ -524,5 +525,81 @@ function formatBytes(bytes: number, decimals = 2) {
   
   return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
+
+// 控制指标收集服务的路由
+metricsRouter.post('/system/collect/control', zValidator('json', z.object({
+  action: z.enum(['start', 'stop', 'trigger', 'interval']),
+  interval: z.string().optional(),
+})), async (c) => {
+  const { action, interval } = c.req.valid('json');
+  
+  try {
+    switch (action) {
+      case 'start':
+        metricCollector.start();
+        return c.json({ success: true, message: '系统指标收集服务已启动' });
+        
+      case 'stop':
+        metricCollector.stop();
+        return c.json({ success: true, message: '系统指标收集服务已停止' });
+        
+      case 'trigger':
+        const result = await metricCollector.triggerCollection();
+        return c.json({ 
+          success: result, 
+          message: result ? '已触发指标收集' : '触发指标收集失败' 
+        });
+        
+      case 'interval':
+        if (!interval) {
+          return c.json({ success: false, message: '设置收集间隔时必须提供interval参数' }, 400);
+        }
+        metricCollector.setInterval(interval);
+        return c.json({ success: true, message: `收集间隔已更新为: ${interval}` });
+        
+      default:
+        return c.json({ success: false, message: '不支持的操作' }, 400);
+    }
+  } catch (error) {
+    console.error('控制指标收集服务失败:', error);
+    return c.json({ success: false, message: '控制指标收集服务失败' }, 500);
+  }
+});
+
+// 获取服务状态信息
+metricsRouter.get('/system/collect/status', async (c) => {
+  try {
+    // 获取总记录数
+    const countResult = await db.select({ 
+      value: count() 
+    })
+    .from(systemMetrics)
+    .execute();
+    
+    // 获取最新记录时间
+    const latestRecord = await db.select({ 
+      createdAt: systemMetrics.createdAt 
+    })
+    .from(systemMetrics)
+    .orderBy(desc(systemMetrics.createdAt))
+    .limit(1)
+    .execute();
+    
+    const totalRecords = countResult[0]?.value || 0;
+    const lastCollectionTime = latestRecord[0]?.createdAt || null;
+    
+    return c.json({
+      success: true,
+      status: {
+        totalRecords,
+        lastCollectionTime,
+        // 这里可以添加其他状态信息
+      }
+    });
+  } catch (error) {
+    console.error('获取收集服务状态失败:', error);
+    return c.json({ success: false, message: '获取收集服务状态失败' }, 500);
+  }
+});
 
 export const metricsRoutes = metricsRouter; 
