@@ -19,5 +19,8 @@
     "platform"
   ],
   "author": "",
-  "license": "ISC"
-} 
+  "license": "ISC",
+  "devDependencies": {
+    "uuid": "11.1.0"
+  }
+}

@@ -333,9 +333,9 @@ export const knowledgeBaseTool = createVectorQueryTool({
 });
 ```
 
-### 3.6 多数据源集成系统
+### 3.6 多数据源集成系统 ✅
 
-#### 3.6.1 功能
+#### 3.6.1 功能 ✅
 
 - 支持多种监控系统数据源集成 (Prometheus, Grafana, Datadog, CloudWatch)
 - 支持多种数据库系统集成 (MySQL, PostgreSQL, MongoDB, ClickHouse)
@@ -344,7 +344,7 @@ export const knowledgeBaseTool = createVectorQueryTool({
 - 统一数据模型和查询接口
 - 数据源健康检查和连接管理
 
-#### 3.6.2 实现方式
+#### 3.6.2 实现方式 ✅
 
 使用插件式架构实现数据源集成，每个数据源通过实现标准接口进行集成：
 

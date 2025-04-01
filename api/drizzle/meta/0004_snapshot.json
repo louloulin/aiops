@@ -1,0 +1,86 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "id": "f9e6a4f4-7ca7-4bd2-97fa-9aa0d4e50ba9",
+  "prevId": "00000000-0000-0000-0000-000000000003",
+  "tables": {
+    "system_metrics": {
+      "name": "system_metrics",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cpu_usage": {
+          "name": "cpu_usage",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "cpu_temperature": {
+          "name": "cpu_temperature",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "memory_used": {
+          "name": "memory_used",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "memory_total": {
+          "name": "memory_total",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "disk_used": {
+          "name": "disk_used",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "disk_total": {
+          "name": "disk_total",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "network_bytes_in": {
+          "name": "network_bytes_in",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "network_bytes_out": {
+          "name": "network_bytes_out",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "CURRENT_TIMESTAMP"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "_meta": {
+    "schemas": {},
+    "tables": {},
+    "columns": {}
+  }
+} 

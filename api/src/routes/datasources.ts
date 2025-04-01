@@ -39,7 +39,7 @@ const addDatasourceSchema = z.object({
 // 获取所有数据源
 datasourcesRoute.get('/', async (c) => {
   try {
-    const dataSources = await db.select().from(datasources).all();
+    const dataSources = await db.select().from(datasources);
     
     // 处理日期格式
     const formattedDataSources = dataSources.map(ds => ({
@@ -65,10 +65,11 @@ datasourcesRoute.get('/:id', async (c) => {
   try {
     const id = c.req.param('id');
     
-    const dataSource = await db.select()
+    const dataSourceResults = await db.select()
       .from(datasources)
-      .where(eq(datasources.id, id))
-      .get();
+      .where(eq(datasources.id, id));
+    
+    const dataSource = dataSourceResults[0];
     
     if (!dataSource) {
       return c.json({
@@ -110,13 +111,13 @@ datasourcesRoute.post('/', zValidator('json', addDatasourceSchema), async (c) =>
       createdAt: new Date()
     };
     
-    const result = await db.insert(datasources).values(newDataSource).returning().get();
+    const result = await db.insert(datasources).values(newDataSource).returning();
     
     return c.json({
       success: true,
       dataSource: {
-        ...result,
-        lastSync: result.lastSync ? new Date(result.lastSync) : null
+        ...result[0],
+        lastSync: result[0].lastSync ? new Date(result[0].lastSync) : null
       }
     }, 201);
   } catch (error) {
@@ -135,10 +136,11 @@ datasourcesRoute.put('/:id', zValidator('json', addDatasourceSchema.partial()), 
     const body = await c.req.valid('json');
     
     // 检查数据源是否存在
-    const existingDataSource = await db.select()
+    const existingResults = await db.select()
       .from(datasources)
-      .where(eq(datasources.id, id))
-      .get();
+      .where(eq(datasources.id, id));
+    
+    const existingDataSource = existingResults[0];
     
     if (!existingDataSource) {
       return c.json({
@@ -157,14 +159,13 @@ datasourcesRoute.put('/:id', zValidator('json', addDatasourceSchema.partial()), 
     const result = await db.update(datasources)
       .set(updatedDataSource)
       .where(eq(datasources.id, id))
-      .returning()
-      .get();
+      .returning();
     
     return c.json({
       success: true,
       dataSource: {
-        ...result,
-        lastSync: result.lastSync ? new Date(result.lastSync) : null
+        ...result[0],
+        lastSync: result[0].lastSync ? new Date(result[0].lastSync) : null
       }
     });
   } catch (error) {
@@ -182,10 +183,11 @@ datasourcesRoute.delete('/:id', async (c) => {
     const id = c.req.param('id');
     
     // 检查数据源是否存在
-    const existingDataSource = await db.select()
+    const existingResults = await db.select()
       .from(datasources)
-      .where(eq(datasources.id, id))
-      .get();
+      .where(eq(datasources.id, id));
+    
+    const existingDataSource = existingResults[0];
     
     if (!existingDataSource) {
       return c.json({
@@ -196,8 +198,7 @@ datasourcesRoute.delete('/:id', async (c) => {
     
     // 删除数据源
     await db.delete(datasources)
-      .where(eq(datasources.id, id))
-      .run();
+      .where(eq(datasources.id, id));
     
     return c.json({
       success: true,
@@ -218,10 +219,11 @@ datasourcesRoute.post('/:id/test', async (c) => {
     const id = c.req.param('id');
     
     // 检查数据源是否存在
-    const dataSource = await db.select()
+    const dataSourceResults = await db.select()
       .from(datasources)
-      .where(eq(datasources.id, id))
-      .get();
+      .where(eq(datasources.id, id));
+    
+    const dataSource = dataSourceResults[0];
     
     if (!dataSource) {
       return c.json({
@@ -246,16 +248,14 @@ datasourcesRoute.post('/:id/test', async (c) => {
           status: 'connected', 
           lastSync: new Date()
         })
-        .where(eq(datasources.id, id))
-        .run();
+        .where(eq(datasources.id, id));
     } else {
       testResult.message = 'Connection failed: timeout';
       
       // 更新数据源状态为error
       await db.update(datasources)
         .set({ status: 'error' })
-        .where(eq(datasources.id, id))
-        .run();
+        .where(eq(datasources.id, id));
     }
     
     return c.json({
