@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import Sidebar from './components/Sidebar.vue';
+import { Toaster } from 'vue-sonner';
 
 const darkMode = ref(localStorage.getItem('darkMode') === 'true');
 const isFullscreen = ref(false);
@@ -109,6 +110,9 @@ onMounted(() => {
         </footer>
       </div>
     </div>
+    
+    <!-- 添加 Toaster 组件 -->
+    <Toaster richColors />
   </div>
 </template>
 

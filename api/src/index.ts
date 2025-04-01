@@ -29,6 +29,8 @@ import { knowledgeBaseAgent } from './agents/knowledgeBaseAgent';
 import { opsAssistant } from './agents/opsAssistant';
 import { initializeDataServices } from './db';
 import runMigrations from './db/migrate';
+import tasksRoutes from './routes/tasks';
+import analyticsRoutes from './routes/analytics';
 
 // 加载环境变量
 dotenv.config();
@@ -61,6 +63,8 @@ app.route('/api/business-metrics', businessMetricsRoutes);
 app.route('/api/datasources', datasourcesRoutes);
 app.route('/api/alerts', alertsRoutes);
 app.route('/api/schedules', schedulesRoutes);
+app.route('/api/tasks', tasksRoutes);
+app.route('/api/analytics', analyticsRoutes);
 
 // 添加数据库路由
 app.get('/api/health', async (c) => {

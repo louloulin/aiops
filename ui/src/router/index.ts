@@ -53,6 +53,11 @@ const routes = [
     component: () => import('../views/MetricsAnalysisView.vue'),
   },
   {
+    path: '/predictive-analytics',
+    name: 'PredictiveAnalytics',
+    component: () => import('../views/PredictiveAnalyticsView.vue'),
+  },
+  {
     path: '/services',
     name: 'ServicesHealth',
     component: () => import('../views/ServicesHealthView.vue'),
