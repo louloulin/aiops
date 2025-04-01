@@ -20,24 +20,31 @@ import { chatRoutes } from './routes/chat';
 import { metricsRoutes } from './routes/metrics';
 import { logsRoutes } from './routes/logs';
 import { alertsRoutes } from './routes/alerts';
+import { monitoringRoutes } from './routes/monitoring';
+import { logAnalysisRoutes } from './routes/logAnalysis';
+import { autoHealingRoutes } from './routes/autoHealing';
 // 注释掉不存在的路由，避免启动错误
 // import { predictiveRoutes } from './routes/predictive';
 // import { dashboardRoutes } from './routes/dashboards';
 // import { configRoutes } from './routes/config';
 // import { scheduledJobsRoutes } from './routes/scheduledJobs';
 // import { notificationsRoutes } from './routes/notifications';
-// import { autoHealingRoutes } from './routes/autoHealing';
 // import { tasksRoutes } from './routes/tasks';
-// import { knowledgeBaseRoutes } from './routes/knowledgeBase';
-// import { serverRoutes } from './routes/servers';
+// import { deploysRoutes } from './routes/deploy';
+// import { knowledgeRoutes } from './routes/knowledge';
+// import { businessMetricsRoutes } from './routes/business-metrics';
+// import { analyticsRoutes } from './routes/analytics';
+// import { schedulesRoutes } from './routes/schedules';
+// import { datasourcesRoutes } from './routes/datasources';
 
 // 导入代理和服务
 import { chatAgent } from './agents/chatAgent';
-import { monitoringAgent } from './agents/monitoringAgent';
-import { logAnalysisAgent } from './agents/logAnalysisAgent';
-import { autoHealingAgent } from './agents/autoHealingAgent';
+// 注释掉不存在或不需要的代理，避免启动错误
+// import { monitoringAgent } from './agents/monitoringAgent';
+// import { logAnalysisAgent } from './agents/logAnalysisAgent';
+// import { autoHealingAgent } from './agents/autoHealingAgent';
 // import { knowledgeBaseAgent } from './agents/knowledgeBaseAgent';
-import { opsAssistant } from './agents/opsAssistant';
+// import { opsAssistant } from './agents/opsAssistant';
 
 // 导入数据库服务
 import { initializeDataServices } from './db';
@@ -144,27 +151,34 @@ api.route('/chat', chatRoutes);
 api.route('/metrics', metricsRoutes);
 api.route('/logs', logsRoutes);
 api.route('/alerts', alertsRoutes);
+api.route('/monitoring', monitoringRoutes);
+api.route('/log-analysis', logAnalysisRoutes);
+api.route('/auto-healing', autoHealingRoutes);
 // 注释掉不存在的路由，避免启动错误
 // api.route('/predictive', predictiveRoutes);
 // api.route('/dashboards', dashboardRoutes);
 // api.route('/config', configRoutes);
 // api.route('/scheduled-jobs', scheduledJobsRoutes);
 // api.route('/notifications', notificationsRoutes);
-// api.route('/auto-healing', autoHealingRoutes);
 // api.route('/tasks', tasksRoutes);
-// api.route('/knowledge-base', knowledgeBaseRoutes);
-// api.route('/servers', serverRoutes);
+// api.route('/deploy', deploysRoutes);
+// api.route('/knowledge', knowledgeRoutes);
+// api.route('/business-metrics', businessMetricsRoutes);
+// api.route('/analytics', analyticsRoutes);
+// api.route('/schedules', schedulesRoutes);
+// api.route('/datasources', datasourcesRoutes);
 
 // 挂载API到主应用
 app.route('/api', api);
 
 // 导出代理实例供其他模块使用
 export const agents = {
-  monitoringAgent,
-  logAnalysisAgent,
-  autoHealingAgent,
-  opsAssistant,
   chatAgent,
+  // 注释掉不存在或不需要的代理，避免启动错误
+  // monitoringAgent,
+  // logAnalysisAgent,
+  // autoHealingAgent,
+  // opsAssistant,
 };
 
 // 环境变量

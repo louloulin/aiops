@@ -59,10 +59,70 @@ function isValidMetric(metric: string): metric is keyof SystemMetrics {
 }
 
 // 创建指标路由
-const metricsRouter = new Hono();
+const metricsRoutes = new Hono();
+
+// 获取CPU使用率数据
+metricsRoutes.get('/cpu', (c) => {
+  const data = generateRandomMetric(80, 10);
+  return c.json(data);
+});
+
+// 获取内存使用率数据
+metricsRoutes.get('/memory', (c) => {
+  const data = generateRandomMetric(70, 15);
+  return c.json(data);
+});
+
+// 获取磁盘使用率数据
+metricsRoutes.get('/disk', (c) => {
+  const data = generateRandomMetric(60, 5);
+  return c.json(data);
+});
+
+// 获取网络流量数据
+metricsRoutes.get('/network', (c) => {
+  return c.json({
+    in: generateRandomMetric(50, 20),
+    out: generateRandomMetric(40, 15)
+  });
+});
+
+// 获取所有指标数据
+metricsRoutes.get('/', (c) => {
+  return c.json({
+    cpu: generateRandomMetric(80, 10),
+    memory: generateRandomMetric(70, 15),
+    disk: generateRandomMetric(60, 5),
+    network: {
+      in: generateRandomMetric(50, 20),
+      out: generateRandomMetric(40, 15)
+    },
+    timestamp: new Date().toISOString()
+  });
+});
+
+// 生成随机指标数据
+function generateRandomMetric(baseValue: number, variance: number, dataPoints = 30) {
+  const now = Date.now();
+  const data = [];
+  
+  for (let i = 0; i < dataPoints; i++) {
+    data.push({
+      timestamp: new Date(now - i * 60000).toISOString(),
+      value: baseValue + (Math.random() * variance * 2 - variance)
+    });
+  }
+  
+  return {
+    data,
+    currentValue: data[0].value,
+    averageValue: data.reduce((sum, point) => sum + point.value, 0) / dataPoints,
+    timestamp: new Date().toISOString()
+  };
+}
 
 // 获取最新系统指标
-metricsRouter.get('/latest', async (c) => {
+metricsRoutes.get('/latest', async (c) => {
   try {
     // 使用Drizzle获取最新指标
     const latestMetric = await dbService.getLatestMetrics();
@@ -103,7 +163,7 @@ metricsRouter.get('/latest', async (c) => {
 });
 
 // 获取历史指标数据
-metricsRouter.get('/history', async (c) => {
+metricsRoutes.get('/history', async (c) => {
   try {
     const limit = parseInt(c.req.query('limit') || '24');
     const offset = parseInt(c.req.query('offset') || '0');
@@ -122,7 +182,7 @@ metricsRouter.get('/history', async (c) => {
 });
 
 // 获取指标统计数据
-metricsRouter.get('/stats', async (c) => {
+metricsRoutes.get('/stats', async (c) => {
   try {
     const stats = await getMetricsStats();
     return c.json({ success: true, data: stats });
@@ -133,7 +193,7 @@ metricsRouter.get('/stats', async (c) => {
 });
 
 // 上传系统指标
-metricsRouter.post('/', async (c) => {
+metricsRoutes.post('/', async (c) => {
   try {
     const body = await c.req.json();
     
@@ -166,7 +226,7 @@ metricsRouter.post('/', async (c) => {
 });
 
 // 模拟生成并保存指标数据（开发/测试使用）
-metricsRouter.post('/generate-mock', async (c) => {
+metricsRoutes.post('/generate-mock', async (c) => {
   try {
     const mockMetrics = generateMockMetrics();
     
@@ -254,7 +314,7 @@ const getSystemMetricsSchema = z.object({
   timeRange: z.string().optional().default('24h'),
 });
 
-metricsRouter.get('/system', zValidator('query', getSystemMetricsSchema), async (c) => {
+metricsRoutes.get('/system', zValidator('query', getSystemMetricsSchema), async (c) => {
   const { limit, timeRange } = c.req.valid('query');
   
   try {
@@ -294,7 +354,7 @@ const mockDataSchema = z.object({
   variation: z.number().optional().default(0.1),
 });
 
-metricsRouter.post('/system/mock', zValidator('json', mockDataSchema), async (c) => {
+metricsRoutes.post('/system/mock', zValidator('json', mockDataSchema), async (c) => {
   const { count, variation } = c.req.valid('json');
   
   try {
@@ -377,7 +437,7 @@ const analyzeMetricsSchema = z.object({
   timeRange: z.string().optional().default('24h'),
 });
 
-metricsRouter.get('/system/analyze', zValidator('query', analyzeMetricsSchema), async (c) => {
+metricsRoutes.get('/system/analyze', zValidator('query', analyzeMetricsSchema), async (c) => {
   const { timeRange } = c.req.valid('query');
   
   try {
@@ -527,7 +587,7 @@ function formatBytes(bytes: number, decimals = 2) {
 }
 
 // 控制指标收集服务的路由
-metricsRouter.post('/system/collect/control', zValidator('json', z.object({
+metricsRoutes.post('/system/collect/control', zValidator('json', z.object({
   action: z.enum(['start', 'stop', 'trigger', 'interval']),
   interval: z.string().optional(),
 })), async (c) => {
@@ -567,7 +627,7 @@ metricsRouter.post('/system/collect/control', zValidator('json', z.object({
 });
 
 // 获取服务状态信息
-metricsRouter.get('/system/collect/status', async (c) => {
+metricsRoutes.get('/system/collect/status', async (c) => {
   try {
     // 获取总记录数
     const countResult = await db.select({ 
@@ -602,4 +662,4 @@ metricsRouter.get('/system/collect/status', async (c) => {
   }
 });
 
-export const metricsRoutes = metricsRouter; 
+export { metricsRoutes }; 

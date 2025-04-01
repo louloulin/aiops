@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { qw, PROMPTS, PROMPT_TYPES } from "../mastra";
+import { qw, PROMPTS, PROMPT_TYPES, memory } from "../mastra";
 import { logAnalysisTools } from "../tools/logAnalysisTools";
 
 /**
@@ -22,14 +22,19 @@ export const logAnalysisAgent = new Agent({
   instructions: PROMPTS[PROMPT_TYPES.LOG_ANALYSIS],
   model: qw,
   tools: logAnalysisTools,
+  memory,
 });
 
 /**
  * 分析日志数据
  * @param logs 日志条目数组
+ * @param sessionId 可选会话ID，用于保持上下文连续性
  * @returns 分析结果，包括洞察、异常模式和建议
  */
-export async function analyzeLogData(logs: LogEntry[]) {
+export async function analyzeLogData(logs: LogEntry[], sessionId?: string) {
+  // 生成唯一会话ID，如果未提供
+  const threadId = sessionId || `log_analysis_${Date.now()}`;
+  
   // 格式化日志数据
   const formattedLogs = logs.map(log => 
     `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.service ? `[${log.service}] ` : ''}${log.message}`
@@ -72,12 +77,28 @@ export async function analyzeLogData(logs: LogEntry[]) {
   4. 排查建议和解决方案
   `;
   
+  // 内存选项
+  const memoryOptions = {
+    lastMessages: 5,           // 保留最近的5条消息，日志分析上下文不需要太多历史
+    semanticRecall: {
+      enabled: false,          // 禁用语义搜索，避免嵌入错误
+      // topK: 3,              // 检索最相关的3条历史记录
+      // messageRange: 1,      // 每个相关消息的上下文窗口
+    },
+    workingMemory: { enabled: true },
+  };
+  
   const response = await logAnalysisAgent.generate([
     { role: "user", content: prompt }
-  ]);
+  ], {
+    // 设置资源ID和会话ID，确保格式一致
+    resourceId: `log_analysis_${threadId}`,
+    threadId: threadId,
+    memoryOptions,
+  });
   
   // 处理返回结果
-  const analysisText = typeof response === 'string' ? response : JSON.stringify(response);
+  const analysisText = typeof response === 'string' ? response : response.text;
   
   // 从分析文本中提取各部分内容
   const problemsMatch = analysisText.match(/主要问题[：:]([\s\S]*?)(?=异常模式[：:]|$)/i);
@@ -113,5 +134,6 @@ export async function analyzeLogData(logs: LogEntry[]) {
     errorCount: errorLogs.length,
     warningCount: warningLogs.length,
     timestamp: new Date().toISOString(),
+    sessionId: threadId,  // 返回会话ID，便于后续分析引用
   };
 } 

@@ -440,7 +440,7 @@ watch(() => document.documentElement.classList.contains('dark'), () => {
         </button>
       </div>
     </div>
-
+    
     <!-- 系统状态概览 -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
@@ -500,14 +500,14 @@ watch(() => document.documentElement.classList.contains('dark'), () => {
                :style="{ width: `${diskUsagePercent}%` }"></div>
         </div>
       </div>
-
+      
       <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
         <div class="flex justify-between">
           <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">网络流量 (KB/s)</h3>
           <div class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">实时</div>
         </div>
         <div class="mt-2 flex items-end justify-between">
-          <div>
+      <div>
             <div class="flex items-center text-sm">
               <span class="w-3 h-3 rounded-full bg-green-500 mr-1"></span>
               <span>入站: {{ (latestMetrics?.networkBytesIn || 0) / 1024 | 0 }}</span>
@@ -554,7 +554,7 @@ watch(() => document.documentElement.classList.contains('dark'), () => {
           </div>
         </div>
       </div>
-
+      
       <!-- 任务状态 -->
       <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">

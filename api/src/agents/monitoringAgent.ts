@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { openai } from "@ai-sdk/openai";
+import { qw, PROMPTS, PROMPT_TYPES, memory } from "../mastra";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import { db } from "../db/drizzle";
@@ -142,14 +142,13 @@ const analyzeSystemMetricsTool = createTool({
 // 创建监控代理
 export const monitoringAgent = new Agent({
   name: "Monitoring Agent",
-  instructions: `你是一个系统监控代理，负责监控系统状态并发现异常。
-  当发现异常时，你应该分析异常原因并提出解决方案。
-  你可以使用监控工具获取系统指标，并可以启动自动修复流程。`,
-  model: openai("gpt-4o"),
+  instructions: PROMPTS[PROMPT_TYPES.MONITORING],
+  model: qw,
   tools: {
     getSystemMetrics: getSystemMetricsTool,
     analyzeSystemMetrics: analyzeSystemMetricsTool,
   },
+  memory,
 });
 
 // 导出监控工具供其他模块使用
@@ -161,9 +160,13 @@ export const monitoringTools = {
 /**
  * 分析系统指标数据
  * @param metrics 系统指标数据
+ * @param sessionId 可选的会话ID，用于保持上下文连续性
  * @returns 分析结果，包括异常、健康分数和建议
  */
-export async function analyzeSystemMetrics(metrics: SystemMetrics): Promise<MonitoringAnalysisResult> {
+export async function analyzeSystemMetrics(metrics: any, sessionId?: string): Promise<MonitoringAnalysisResult> {
+  // 生成唯一的会话ID，如果未提供
+  const threadId = sessionId || `monitoring_${Date.now()}`;
+  
   // 格式化指标数据为文本描述
   const metricsDescription = `
     系统当前状态：
@@ -172,6 +175,17 @@ export async function analyzeSystemMetrics(metrics: SystemMetrics): Promise<Moni
     - 磁盘：总计 ${metrics.disk.total}MB，已使用 ${metrics.disk.used.toFixed(2)}MB，空闲 ${metrics.disk.free.toFixed(2)}MB
     - 网络：入站流量 ${metrics.network.bytesIn.toFixed(2)}bytes，出站流量 ${metrics.network.bytesOut.toFixed(2)}bytes
   `;
+
+  // 配置内存选项
+  const memoryOptions = {
+    lastMessages: 5,           // 保留最近的5条消息
+    semanticRecall: {
+      enabled: false,          // 禁用语义搜索，避免嵌入错误
+      // topK: 3,              // 检索最相关的3条历史记录
+      // messageRange: 1,      // 每个相关消息的上下文窗口
+    },
+    workingMemory: { enabled: true },
+  };
 
   // 使用监控代理分析数据
   const response = await monitoringAgent.generate([
@@ -183,11 +197,14 @@ export async function analyzeSystemMetrics(metrics: SystemMetrics): Promise<Moni
       role: "user", 
       content: `请分析以下系统指标数据并提供详细报告：\n${metricsDescription}`
     }
-  ]);
+  ], {
+    resourceId: `system_metrics_${threadId}`,
+    threadId: threadId,
+    memoryOptions,
+  });
 
   // 处理代理响应，提取分析结果
-  // 注：在实际项目中，可能需要更复杂的结果解析，或者使用结构化输出格式
-  const analysisText = typeof response === 'string' ? response : JSON.stringify(response);
+  const analysisText = typeof response === 'string' ? response : response.text;
   
   // 简单的异常检测逻辑
   const anomalies = [];
@@ -198,85 +215,122 @@ export async function analyzeSystemMetrics(metrics: SystemMetrics): Promise<Moni
       severity: 'high',
       message: `CPU 使用率过高: ${metrics.cpu.usage.toFixed(2)}%`,
     });
-  } else if (metrics.cpu.usage > 70) {
+  } else if (metrics.cpu.usage > 80) {
     anomalies.push({
       component: 'CPU',
       severity: 'medium',
-      message: `CPU 使用率偏高: ${metrics.cpu.usage.toFixed(2)}%`,
+      message: `CPU 使用率较高: ${metrics.cpu.usage.toFixed(2)}%`,
     });
   }
   
-  if (metrics.cpu.temperature > 60) {
+  if (metrics.cpu.temperature > 85) {
     anomalies.push({
       component: 'CPU',
       severity: 'critical',
       message: `CPU 温度过高: ${metrics.cpu.temperature.toFixed(2)}°C`,
     });
-  } else if (metrics.cpu.temperature > 50) {
+  } else if (metrics.cpu.temperature > 75) {
     anomalies.push({
       component: 'CPU',
       severity: 'high',
-      message: `CPU 温度偏高: ${metrics.cpu.temperature.toFixed(2)}°C`,
+      message: `CPU 温度较高: ${metrics.cpu.temperature.toFixed(2)}°C`,
     });
   }
   
-  const memoryUsage = (metrics.memory.used / metrics.memory.total) * 100;
-  if (memoryUsage > 90) {
+  const memoryUsagePercent = (metrics.memory.used / metrics.memory.total) * 100;
+  if (memoryUsagePercent > 90) {
     anomalies.push({
       component: 'Memory',
       severity: 'high',
-      message: `内存使用率过高: ${memoryUsage.toFixed(2)}%`,
+      message: `内存使用率过高: ${memoryUsagePercent.toFixed(2)}%`,
     });
-  } else if (memoryUsage > 80) {
+  } else if (memoryUsagePercent > 80) {
     anomalies.push({
       component: 'Memory',
       severity: 'medium',
-      message: `内存使用率偏高: ${memoryUsage.toFixed(2)}%`,
+      message: `内存使用率较高: ${memoryUsagePercent.toFixed(2)}%`,
     });
   }
   
-  const diskUsage = (metrics.disk.used / metrics.disk.total) * 100;
-  if (diskUsage > 90) {
+  const diskUsagePercent = (metrics.disk.used / metrics.disk.total) * 100;
+  if (diskUsagePercent > 90) {
     anomalies.push({
       component: 'Disk',
       severity: 'high',
-      message: `磁盘使用率过高: ${diskUsage.toFixed(2)}%`,
+      message: `磁盘使用率过高: ${diskUsagePercent.toFixed(2)}%`,
     });
-  } else if (diskUsage > 75) {
+  } else if (diskUsagePercent > 80) {
     anomalies.push({
       component: 'Disk',
       severity: 'medium',
-      message: `磁盘使用率偏高: ${diskUsage.toFixed(2)}%`,
+      message: `磁盘使用率较高: ${diskUsagePercent.toFixed(2)}%`,
     });
   }
   
-  // 计算健康分数
-  let healthScore = 100;
-  anomalies.forEach(anomaly => {
-    if (anomaly.severity === 'critical') healthScore -= 25;
-    else if (anomaly.severity === 'high') healthScore -= 15;
-    else if (anomaly.severity === 'medium') healthScore -= 10;
-    else healthScore -= 5;
-  });
+  // 简单提取AI分析中的见解和建议
+  const insights = [];
+  const recommendations = [];
   
-  // 从代理响应中提取洞察和建议
-  // 这是一个简化的示例，实际中可能需要使用更复杂的文本处理或结构化输出
-  const insightsMatch = analysisText.match(/洞察[：:]([\s\S]*?)(?=建议[：:]|$)/i);
+  // 尝试从AI响应中提取见解
+  const insightsMatch = analysisText.match(/见解[：:]([\s\S]*?)(?=建议[：:]|$)/i);
+  if (insightsMatch && insightsMatch[1]) {
+    const insightsList = insightsMatch[1].split(/\n/).filter(line => line.trim());
+    insights.push(...insightsList.map(line => line.trim().replace(/^[\d\.\-\*•]+\s*/, '')));
+  }
+  
+  // 尝试从AI响应中提取建议
   const recommendationsMatch = analysisText.match(/建议[：:]([\s\S]*?)(?=$)/i);
+  if (recommendationsMatch && recommendationsMatch[1]) {
+    const recommendationsList = recommendationsMatch[1].split(/\n/).filter(line => line.trim());
+    recommendations.push(...recommendationsList.map(line => line.trim().replace(/^[\d\.\-\*•]+\s*/, '')));
+  }
   
-  const insights = insightsMatch 
-    ? insightsMatch[1].split(/\n/).filter(line => line.trim()).map(line => line.trim().replace(/^[•\-]\s*/, ''))
-    : [];
+  // 如果AI没有提供足够的见解或建议，添加一些基本的
+  if (insights.length === 0) {
+    if (anomalies.length > 0) {
+      insights.push('系统存在性能异常，需要进一步监控');
+    } else {
+      insights.push('系统指标正常，未发现明显异常');
+    }
+  }
   
-  const recommendations = recommendationsMatch
-    ? recommendationsMatch[1].split(/\n/).filter(line => line.trim()).map(line => line.trim().replace(/^[•\-]\s*/, ''))
-    : [];
-
+  if (recommendations.length === 0) {
+    if (anomalies.length > 0) {
+      recommendations.push('建议排查高负载进程');
+      recommendations.push('考虑优化应用性能或增加资源');
+    } else {
+      recommendations.push('继续保持当前监控频率');
+    }
+  }
+  
+  // 计算健康评分（0-100）
+  let healthScore = 100;
+  // 根据异常扣分
+  anomalies.forEach(anomaly => {
+    switch (anomaly.severity) {
+      case 'critical':
+        healthScore -= 25;
+        break;
+      case 'high':
+        healthScore -= 15;
+        break;
+      case 'medium':
+        healthScore -= 10;
+        break;
+      case 'low':
+        healthScore -= 5;
+        break;
+    }
+  });
+  // 确保分数在0-100范围内
+  healthScore = Math.max(0, Math.min(100, healthScore));
+  
   return {
     anomalies,
-    healthScore: Math.max(0, healthScore),
+    healthScore,
     insights,
     recommendations,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    sessionId: threadId,  // 返回会话ID，便于后续分析引用
   };
 } 

@@ -1,5 +1,5 @@
 import { Agent } from '@mastra/core/agent';
-import { qw, PROMPTS, PROMPT_TYPES } from '../mastra';
+import { qw, PROMPTS, PROMPT_TYPES, memory } from '../mastra';
 import { knowledgeBaseTools } from '../tools/knowledgeBaseTools';
 
 /**
@@ -13,6 +13,7 @@ export const knowledgeBaseAgent = new Agent({
   instructions: PROMPTS[PROMPT_TYPES.KNOWLEDGE_BASE],
   model: qw,
   tools: knowledgeBaseTools,
+  memory,
 });
 
 /**
@@ -31,21 +32,41 @@ export interface KnowledgeEntry {
 /**
  * 查询知识库
  * @param query 查询问题
+ * @param sessionId 可选的会话ID，用于保持上下文连续性
  * @returns 回答结果
  */
-export async function queryKnowledgeBase(query: string) {
+export async function queryKnowledgeBase(query: string, sessionId?: string) {
+  // 生成会话ID，如果未提供
+  const threadId = sessionId || `kb_query_${Date.now()}`;
+  
+  // 内存选项配置
+  const memoryOptions = {
+    lastMessages: 10,           // 保留最近的10条消息，知识库问答需要更多上下文
+    semanticRecall: {
+      enabled: false,           // 禁用语义搜索，避免嵌入错误
+      // topK: 5,               // 检索最相关的5条历史记录
+      // messageRange: 2,       // 每个相关消息的上下文窗口
+    },
+    workingMemory: { enabled: true },
+  };
+  
   const response = await knowledgeBaseAgent.generate([
     {
       role: "user",
       content: `${query}`,
     }
-  ]);
+  ], {
+    resourceId: `knowledge_base_${threadId}`,
+    threadId: threadId,
+    memoryOptions,
+  });
 
   return {
-    answer: response.text,
+    answer: typeof response === 'string' ? response : response.text,
     query,
-    relatedTags: extractTags(response.text),
+    relatedTags: extractTags(typeof response === 'string' ? response : response.text),
     timestamp: new Date().toISOString(),
+    sessionId: threadId,  // 返回会话ID，便于后续问答引用
   };
 }
 

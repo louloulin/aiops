@@ -3,6 +3,9 @@
   "workspaces": {
     "": {
       "name": "aiops",
+      "dependencies": {
+        "fastembed": "1.14.1",
+      },
       "devDependencies": {
         "uuid": "11.1.0",
       },

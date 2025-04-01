@@ -1,23 +1,10 @@
 import { Agent } from '@mastra/core/agent';
-import { qw, PROMPTS, PROMPT_TYPES } from '../mastra';
-import { Memory } from '@mastra/memory';
+import { qw, PROMPTS, PROMPT_TYPES, memory } from '../mastra';
 import { monitoringTools } from '../tools/monitoringTools';
 import { logAnalysisTools } from '../tools/logAnalysisTools';
 import { autoHealingTools } from '../tools/autoHealingTools';
 import { knowledgeBaseTools } from '../tools/knowledgeBaseTools';
 import { CoreMessage } from '@mastra/core';
-
-// 初始化记忆系统
-const memory = new Memory({
-  options: {
-    lastMessages: 20,
-    semanticRecall: {
-      topK: 5,
-      messageRange: 2,
-    },
-    workingMemory: { enabled: true },
-  },
-});
 
 /**
  * 运维助手代理
@@ -42,9 +29,10 @@ export const opsAssistant = new Agent({
  * 向运维助手提问
  * @param query 问题
  * @param conversationId 会话ID
+ * @param _userId 用户ID (未使用)
  * @returns 回答
  */
-export async function askOpsAssistant(query: string, conversationId?: string) {
+export async function askOpsAssistant(query: string, conversationId?: string, _userId?: string) {
   const messages: CoreMessage[] = [
     {
       role: 'user',
@@ -52,18 +40,34 @@ export async function askOpsAssistant(query: string, conversationId?: string) {
     }
   ];
 
-  // 如果有会话ID，则将其添加到上下文
-  const resourceId = conversationId ? `conversation-${conversationId}` : undefined;
-  const threadId = conversationId;
+  // 生成唯一的会话ID，如果未提供
+  const threadId = conversationId || generateConversationId();
+  
+  // 确保资源ID与threadId保持一致
+  const resourceId = `user_${threadId}`;
+  
+  // 内存选项配置
+  const memoryOptions = {
+    lastMessages: 15,           // 保留最近的15条消息
+    semanticRecall: {
+      enabled: false,           // 禁用语义搜索，避免嵌入错误
+      // topK: 5,               // 检索最相关的5条历史记录
+      // messageRange: 2,       // 每个相关消息的上下文窗口
+    },
+    workingMemory: { enabled: true },
+  };
 
-  const response = resourceId && threadId 
-    ? await opsAssistant.generate(messages, { resourceId, threadId })
-    : await opsAssistant.generate(messages);
+  // 使用记忆系统进行生成
+  const response = await opsAssistant.generate(messages, { 
+    resourceId,
+    threadId,
+    memoryOptions,
+  });
 
   return {
-    answer: response.text,
+    answer: typeof response === 'string' ? response : response.text,
     query,
-    conversationId: conversationId || generateConversationId(),
+    conversationId: threadId,
     timestamp: new Date().toISOString(),
   };
 }

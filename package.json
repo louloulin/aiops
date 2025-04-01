@@ -22,5 +22,8 @@
   "license": "ISC",
   "devDependencies": {
     "uuid": "11.1.0"
+  },
+  "dependencies": {
+    "fastembed": "1.14.1"
   }
 }

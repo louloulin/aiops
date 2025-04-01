@@ -1,5 +1,5 @@
 import { Agent } from "@mastra/core/agent";
-import { qw, PROMPTS, PROMPT_TYPES } from "../mastra";
+import { qw, PROMPTS, PROMPT_TYPES, memory } from "../mastra";
 import { autoHealingTools } from "../tools/autoHealingTools";
 
 /**
@@ -35,14 +35,19 @@ export const autoHealingAgent = new Agent({
   instructions: PROMPTS[PROMPT_TYPES.AUTO_HEALING],
   model: qw,
   tools: autoHealingTools,
+  memory,
 });
 
 /**
  * 诊断系统问题并生成修复计划
  * @param issue 系统问题描述
+ * @param sessionId 可选的会话ID，用于保持上下文连续性
  * @returns 诊断结果和修复计划
  */
-export async function diagnoseAndRemediate(issue: Issue) {
+export async function diagnoseAndRemediate(issue: Issue, sessionId?: string) {
+  // 生成会话ID，如果未提供
+  const threadId = sessionId || `healing_${issue.id}_${Date.now()}`;
+  
   // 格式化问题描述
   const issueDescription = `
   问题信息:
@@ -58,6 +63,17 @@ export async function diagnoseAndRemediate(issue: Issue) {
   ${issue.logs ? `相关日志:\n${issue.logs.map(log => JSON.stringify(log)).join('\n')}` : ''}
   `;
   
+  // 内存选项配置
+  const memoryOptions = {
+    lastMessages: 10,             // 保留最近的10条消息
+    semanticRecall: {
+      enabled: false,             // 禁用语义搜索，避免嵌入错误
+      // topK: 5,                 // 检索最相关的5条历史记录
+      // messageRange: 2,         // 每个相关消息的上下文窗口
+    },
+    workingMemory: { enabled: true },
+  };
+  
   // 使用自动修复代理分析问题
   const response = await autoHealingAgent.generate([
     { 
@@ -68,10 +84,14 @@ export async function diagnoseAndRemediate(issue: Issue) {
       role: "user", 
       content: `请诊断以下系统问题并提供修复计划：\n${issueDescription}`
     }
-  ]);
+  ], {
+    resourceId: `auto_healing_${threadId}`,
+    threadId: threadId,
+    memoryOptions,
+  });
   
   // 处理代理响应
-  const analysisText = typeof response === 'string' ? response : JSON.stringify(response);
+  const analysisText = typeof response === 'string' ? response : response.text;
   
   // 从分析文本中提取各部分内容
   const diagnosisMatch = analysisText.match(/诊断[：:]([\s\S]*?)(?=修复计划[：:]|$)/i);
@@ -108,6 +128,7 @@ export async function diagnoseAndRemediate(issue: Issue) {
     steps,
     expectedResults,
     timestamp: new Date().toISOString(),
+    sessionId: threadId,  // 返回会话ID，便于后续操作引用
   };
 }
 
@@ -115,9 +136,13 @@ export async function diagnoseAndRemediate(issue: Issue) {
  * 验证修复结果
  * @param issue 原始问题
  * @param result 修复结果
+ * @param sessionId 可选的会话ID，应与诊断阶段使用相同ID
  * @returns 验证结果
  */
-export async function validateRemediation(issue: Issue, result: RemediationResult) {
+export async function validateRemediation(issue: Issue, result: RemediationResult, sessionId?: string) {
+  // 确保使用相同的会话ID，保持上下文连续性
+  const threadId = sessionId || `healing_${issue.id}_${Date.now()}`;
+  
   const validationPrompt = `
   请验证以下修复操作是否已成功解决问题：
   
@@ -132,16 +157,32 @@ export async function validateRemediation(issue: Issue, result: RemediationResul
   请提供验证结果和建议。
   `;
   
+  // 内存选项配置
+  const memoryOptions = {
+    lastMessages: 5,           // 保留最近的5条消息
+    semanticRecall: {
+      enabled: false,          // 禁用语义搜索，避免嵌入错误
+      // topK: 3,              // 检索最相关的3条历史记录
+      // messageRange: 2,      // 每个相关消息的上下文窗口
+    },
+    workingMemory: { enabled: true },
+  };
+  
   const response = await autoHealingAgent.generate([
     { role: "user", content: validationPrompt }
-  ]);
+  ], {
+    resourceId: `auto_healing_${threadId}`,
+    threadId: threadId,
+    memoryOptions,
+  });
   
-  const validationText = typeof response === 'string' ? response : '';
+  const validationText = typeof response === 'string' ? response : response.text;
   
   return {
     originalIssue: issue,
     remediationResult: result,
-    validationResult: validationText || '',
+    validationResult: validationText,
     timestamp: new Date().toISOString(),
+    sessionId: threadId,
   };
 } 
