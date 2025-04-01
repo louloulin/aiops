@@ -31,6 +31,7 @@ import { initializeDataServices } from './db';
 import runMigrations from './db/migrate';
 import tasksRoutes from './routes/tasks';
 import analyticsRoutes from './routes/analytics';
+import { isCacheMemory } from './db/redis';
 
 // 加载环境变量
 dotenv.config();
@@ -69,12 +70,17 @@ app.route('/api/analytics', analyticsRoutes);
 // 添加数据库路由
 app.get('/api/health', async (c) => {
   try {
+    const cacheType = await isCacheMemory() ? 'memory' : 'redis';
+    
     return c.json({ 
       status: 'ok', 
       services: { 
         api: 'online',
         database: 'online',
-        cache: 'online'
+        cache: {
+          status: 'online',
+          type: cacheType
+        }
       } 
     });
   } catch (error) {
