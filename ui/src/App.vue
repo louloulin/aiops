@@ -2,6 +2,7 @@
 import { ref, onMounted } from 'vue';
 import Sidebar from './components/Sidebar.vue';
 import { Toaster } from 'vue-sonner';
+import FloatingChatButton from './components/chat/FloatingChatButton.vue';
 
 const darkMode = ref(localStorage.getItem('darkMode') === 'true');
 const isFullscreen = ref(false);
@@ -113,6 +114,7 @@ onMounted(() => {
     
     <!-- 添加 Toaster 组件 -->
     <Toaster richColors />
+    <FloatingChatButton />
   </div>
 </template>
 

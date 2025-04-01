@@ -27,10 +27,12 @@ import { logAnalysisAgent } from './agents/logAnalysisAgent';
 import { autoHealingAgent } from './agents/autoHealingAgent';
 import { knowledgeBaseAgent } from './agents/knowledgeBaseAgent';
 import { opsAssistant } from './agents/opsAssistant';
+import { chatAgent } from './agents/chatAgent';
 import { initializeDataServices } from './db';
 import runMigrations from './db/migrate';
 import tasksRoutes from './routes/tasks';
 import analyticsRoutes from './routes/analytics';
+import { chatRoutes } from './routes/chat';
 import { isCacheMemory } from './db/redis';
 
 // 加载环境变量
@@ -66,6 +68,7 @@ app.route('/api/alerts', alertsRoutes);
 app.route('/api/schedules', schedulesRoutes);
 app.route('/api/tasks', tasksRoutes);
 app.route('/api/analytics', analyticsRoutes);
+app.route('/api/chat', chatRoutes);
 
 // 添加数据库路由
 app.get('/api/health', async (c) => {
@@ -100,6 +103,7 @@ export const agents = {
   autoHealingAgent,
   knowledgeBaseAgent,
   opsAssistant,
+  chatAgent,
 };
 
 // 服务器初始化
