@@ -1,321 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import Chart from 'chart.js/auto';
+import { API_BASE_URL } from '../config';
 import MetricsCard from '../components/MetricsCard.vue';
 import LogsCard from '../components/LogsCard.vue';
 import DeploymentCard from '../components/DeploymentCard.vue';
 import StatusCard from '../components/StatusCard.vue';
 
-interface Metrics {
-  cpu: {
-    usage: number;
-    temperature: number;
-  };
-  memory: {
-    total: number;
-    used: number;
-    free: number;
-  };
-  disk: {
-    total: number;
-    used: number;
-    free: number;
-  };
-  network: {
-    bytesIn: number;
-    bytesOut: number;
-  };
-}
-
-// Data
-const metrics = ref<Metrics | null>(null);
-const logs = ref<any[]>([]);
-const deployments = ref<any[]>([]);
-const loading = ref({
-  metrics: true,
-  logs: true,
-  deployments: true,
-});
-
-// Fetch data
-const fetchMetrics = async () => {
-  try {
-    loading.value.metrics = true;
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/metrics/latest`);
-    const data = await response.json();
-    if (data.success && data.data) {
-      metrics.value = data.data;
-    }
-  } catch (error) {
-    console.error('Error fetching metrics:', error);
-  } finally {
-    loading.value.metrics = false;
-  }
-};
-
-const fetchLogs = async () => {
-  try {
-    loading.value.logs = true;
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/logs?limit=5`);
-    const data = await response.json();
-    
-    // Ensure logs is always an array
-    if (Array.isArray(data)) {
-      logs.value = data;
-    } else if (data.rows && Array.isArray(data.rows)) {
-      logs.value = data.rows;
-    } else {
-      // If response is not in expected format, use mock data
-      generateMockLogs();
-    }
-  } catch (error) {
-    console.error('Error fetching logs:', error);
-    // Generate mock data when there's an error
-    generateMockLogs();
-  } finally {
-    loading.value.logs = false;
-  }
-};
-
-const generateMockLogs = () => {
-  // Only generate mock data in development
-  if (import.meta.env.DEV) {
-    logs.value = [
-      { level: 'error', message: 'Database connection failed', service: 'api', timestamp: new Date().toISOString() },
-      { level: 'warn', message: 'High CPU usage detected', service: 'monitoring', timestamp: new Date().toISOString() },
-      { level: 'info', message: 'Application started successfully', service: 'api', timestamp: new Date().toISOString() },
-      { level: 'debug', message: 'Processing request #1234', service: 'api', timestamp: new Date().toISOString() },
-      { level: 'info', message: 'User login successful', service: 'auth', timestamp: new Date().toISOString() },
-    ];
-  } else {
-    logs.value = [];
-  }
-};
-
-const fetchDeployments = async () => {
-  try {
-    loading.value.deployments = true;
-    const response = await fetch(`${import.meta.env.VITE_API_URL}/deploy?limit=5`);
-    const data = await response.json();
-    
-    // Ensure deployments is always an array
-    if (Array.isArray(data)) {
-      deployments.value = data;
-    } else if (data.rows && Array.isArray(data.rows)) {
-      deployments.value = data.rows;
-    } else {
-      // If response is not in expected format, use mock data
-      generateMockDeployments();
-    }
-  } catch (error) {
-    console.error('Error fetching deployments:', error);
-    // Generate mock data when there's an error
-    generateMockDeployments();
-  } finally {
-    loading.value.deployments = false;
-  }
-};
-
-const generateMockDeployments = () => {
-  // Only generate mock data in development
-  if (import.meta.env.DEV) {
-    deployments.value = [
-      { id: 1, name: 'api-service', version: 'v1.2.3', status: 'success', created_at: new Date().toISOString() },
-      { id: 2, name: 'ui', version: 'v2.0.1', status: 'pending', created_at: new Date().toISOString() },
-      { id: 3, name: 'database', version: 'v1.0.5', status: 'success', created_at: new Date().toISOString() },
-    ];
-  } else {
-    deployments.value = [];
-  }
-};
-
-// Initialize
-onMounted(() => {
-  fetchMetrics();
-  fetchLogs();
-  fetchDeployments();
-});
-</script>
-
-<template>
-  <div class="space-y-6">
-    <div class="flex justify-between items-center">
-      <h1 class="text-2xl font-bold">系统仪表板</h1>
-      <div class="flex gap-2">
-        <button 
-          @click="refreshAll" 
-          class="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1"
-          :disabled="loading">
-          <span v-if="loading" class="animate-spin">⟳</span>
-          <span>刷新</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- 系统状态概览 -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-        <div class="flex justify-between">
-          <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">CPU 使用率</h3>
-          <div :class="getStatusClass(latestMetrics?.cpuUsage || 0, 80, 90)">
-            {{ getStatusLabel(latestMetrics?.cpuUsage || 0, 80, 90) }}
-          </div>
-        </div>
-        <div class="mt-2 flex items-end">
-          <span class="text-2xl font-bold">{{ latestMetrics?.cpuUsage?.toFixed(1) || '0.0' }}%</span>
-          <div class="ml-2 text-xs" :class="getCpuTrendClass()">
-            <span v-if="cpuTrend > 0">↑ {{ cpuTrend.toFixed(1) }}%</span>
-            <span v-else-if="cpuTrend < 0">↓ {{ Math.abs(cpuTrend).toFixed(1) }}%</span>
-            <span v-else>-</span>
-          </div>
-        </div>
-        <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div class="h-full rounded-full" 
-               :class="getUsageBarClass(latestMetrics?.cpuUsage || 0)"
-               :style="{ width: `${Math.min(latestMetrics?.cpuUsage || 0, 100)}%` }"></div>
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-        <div class="flex justify-between">
-          <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">内存使用率</h3>
-          <div :class="getStatusClass(memoryUsagePercent, 75, 90)">
-            {{ getStatusLabel(memoryUsagePercent, 75, 90) }}
-          </div>
-        </div>
-        <div class="mt-2 flex items-end">
-          <span class="text-2xl font-bold">{{ memoryUsagePercent.toFixed(1) }}%</span>
-          <span class="ml-2 text-xs text-gray-500">{{ formatBytes(latestMetrics?.memoryUsed || 0) }} / {{ formatBytes(latestMetrics?.memoryTotal || 0) }}</span>
-        </div>
-        <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div class="h-full rounded-full" 
-               :class="getUsageBarClass(memoryUsagePercent)"
-               :style="{ width: `${memoryUsagePercent}%` }"></div>
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-        <div class="flex justify-between">
-          <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">磁盘使用率</h3>
-          <div :class="getStatusClass(diskUsagePercent, 85, 95)">
-            {{ getStatusLabel(diskUsagePercent, 85, 95) }}
-          </div>
-        </div>
-        <div class="mt-2 flex items-end">
-          <span class="text-2xl font-bold">{{ diskUsagePercent.toFixed(1) }}%</span>
-          <span class="ml-2 text-xs text-gray-500">{{ formatBytes(latestMetrics?.diskUsed || 0) }} / {{ formatBytes(latestMetrics?.diskTotal || 0) }}</span>
-        </div>
-        <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-          <div class="h-full rounded-full" 
-               :class="getUsageBarClass(diskUsagePercent)"
-               :style="{ width: `${diskUsagePercent}%` }"></div>
-        </div>
-      </div>
-
-      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
-        <div class="flex justify-between">
-          <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">网络流量 (KB/s)</h3>
-          <div class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">实时</div>
-        </div>
-        <div class="mt-2 flex items-end justify-between">
-          <div>
-            <div class="flex items-center text-sm">
-              <span class="w-3 h-3 rounded-full bg-green-500 mr-1"></span>
-              <span>入站: {{ (latestMetrics?.networkBytesIn || 0) / 1024 | 0 }}</span>
-            </div>
-            <div class="flex items-center text-sm mt-1">
-              <span class="w-3 h-3 rounded-full bg-blue-500 mr-1"></span>
-              <span>出站: {{ (latestMetrics?.networkBytesOut || 0) / 1024 | 0 }}</span>
-            </div>
-          </div>
-          <div class="text-xl font-bold">
-            {{ ((latestMetrics?.networkBytesIn || 0) + (latestMetrics?.networkBytesOut || 0)) / 1024 | 0 }}
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 告警和系统状态 -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-      <!-- 最新告警 -->
-      <div class="md:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <h2 class="text-lg font-semibold">最新告警</h2>
-          <router-link to="/alerts" class="text-blue-500 hover:text-blue-600 text-sm">查看全部 →</router-link>
-        </div>
-        <div class="p-4">
-          <div v-if="loadingAlerts" class="flex justify-center items-center h-32">
-            <div class="animate-spin h-6 w-6 border-2 border-blue-500 rounded-full border-t-transparent"></div>
-          </div>
-          <div v-else-if="alerts.length === 0" class="text-center py-8 text-gray-500">
-            目前没有告警信息
-          </div>
-          <div v-else class="space-y-3">
-            <div v-for="alert in alerts.slice(0, 3)" :key="alert.id" 
-                 class="p-3 rounded-md" :class="getAlertBgClass(alert.severity)">
-              <div class="flex justify-between">
-                <div class="font-medium flex items-center">
-                  <span :class="getAlertIconClass(alert.severity)" class="mr-2">⚠</span>
-                  <span>{{ alert.source }} - {{ alert.metric }}</span>
-                </div>
-                <div class="text-xs text-gray-500">{{ formatTime(alert.timestamp) }}</div>
-              </div>
-              <div class="mt-1 text-sm">{{ alert.message }}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 任务状态 -->
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-          <h2 class="text-lg font-semibold">计划任务状态</h2>
-          <router-link to="/schedules" class="text-blue-500 hover:text-blue-600 text-sm">管理 →</router-link>
-        </div>
-        <div class="p-4">
-          <div v-if="loadingTasks" class="flex justify-center items-center h-32">
-            <div class="animate-spin h-6 w-6 border-2 border-blue-500 rounded-full border-t-transparent"></div>
-          </div>
-          <div v-else-if="tasks.length === 0" class="text-center py-8 text-gray-500">
-            没有计划任务
-          </div>
-          <div v-else class="space-y-3">
-            <div v-for="task in tasks" :key="task.id" class="border-b border-gray-200 dark:border-gray-700 last:border-b-0 pb-3 last:pb-0">
-              <div class="flex justify-between items-center">
-                <span class="font-medium">{{ task.name }}</span>
-                <span :class="task.isEnabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-0.5 text-xs rounded-full">
-                  {{ task.isEnabled ? '已启用' : '已禁用' }}
-                </span>
-              </div>
-              <div class="text-xs text-gray-500 mt-1">
-                <div>Cron: {{ task.cronExpression }}</div>
-                <div>下次执行: {{ formatTime(task.nextRunTime) }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 系统资源使用历史 -->
-    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
-      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
-        <h2 class="text-lg font-semibold">系统资源使用历史</h2>
-      </div>
-      <div class="p-4">
-        <div class="h-80">
-          <canvas ref="systemHistoryChart"></canvas>
-        </div>
-      </div>
-    </div>
-  </div>
-</template>
-
-<script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
-import Chart from 'chart.js/auto';
-import { API_BASE_URL } from '../config';
-
-// 状态
+// 状态变量
 const loading = ref(false);
 const loadingAlerts = ref(false);
 const loadingTasks = ref(false);
@@ -327,6 +19,15 @@ const refreshInterval = ref<number | null>(null);
 const systemHistoryChart = ref<HTMLCanvasElement | null>(null);
 let chartInstance: Chart | null = null;
 const cpuTrend = ref(0);
+
+// 旧代码的状态变量
+const logs = ref<any[]>([]);
+const deployments = ref<any[]>([]);
+const oldLoading = ref({
+  metrics: true,
+  logs: true,
+  deployments: true,
+});
 
 // 计算属性
 const memoryUsagePercent = computed(() => {
@@ -410,6 +111,96 @@ const fetchTasks = async () => {
     console.error('获取计划任务错误:', error);
   } finally {
     loadingTasks.value = false;
+  }
+};
+
+// 旧的API函数
+const fetchMetrics = async () => {
+  try {
+    oldLoading.value.metrics = true;
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/metrics/latest`);
+    const data = await response.json();
+    // 处理响应数据
+  } catch (error) {
+    console.error('Error fetching metrics:', error);
+  } finally {
+    oldLoading.value.metrics = false;
+  }
+};
+
+const fetchLogs = async () => {
+  try {
+    oldLoading.value.logs = true;
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/logs?limit=5`);
+    const data = await response.json();
+    
+    // Ensure logs is always an array
+    if (Array.isArray(data)) {
+      logs.value = data;
+    } else if (data.rows && Array.isArray(data.rows)) {
+      logs.value = data.rows;
+    } else {
+      // If response is not in expected format, use mock data
+      generateMockLogs();
+    }
+  } catch (error) {
+    console.error('Error fetching logs:', error);
+    // Generate mock data when there's an error
+    generateMockLogs();
+  } finally {
+    oldLoading.value.logs = false;
+  }
+};
+
+const generateMockLogs = () => {
+  // Only generate mock data in development
+  if (import.meta.env.DEV) {
+    logs.value = [
+      { level: 'error', message: 'Database connection failed', service: 'api', timestamp: new Date().toISOString() },
+      { level: 'warn', message: 'High CPU usage detected', service: 'monitoring', timestamp: new Date().toISOString() },
+      { level: 'info', message: 'Application started successfully', service: 'api', timestamp: new Date().toISOString() },
+      { level: 'debug', message: 'Processing request #1234', service: 'api', timestamp: new Date().toISOString() },
+      { level: 'info', message: 'User login successful', service: 'auth', timestamp: new Date().toISOString() },
+    ];
+  } else {
+    logs.value = [];
+  }
+};
+
+const fetchDeployments = async () => {
+  try {
+    oldLoading.value.deployments = true;
+    const response = await fetch(`${import.meta.env.VITE_API_URL}/deploy?limit=5`);
+    const data = await response.json();
+    
+    // Ensure deployments is always an array
+    if (Array.isArray(data)) {
+      deployments.value = data;
+    } else if (data.rows && Array.isArray(data.rows)) {
+      deployments.value = data.rows;
+    } else {
+      // If response is not in expected format, use mock data
+      generateMockDeployments();
+    }
+  } catch (error) {
+    console.error('Error fetching deployments:', error);
+    // Generate mock data when there's an error
+    generateMockDeployments();
+  } finally {
+    oldLoading.value.deployments = false;
+  }
+};
+
+const generateMockDeployments = () => {
+  // Only generate mock data in development
+  if (import.meta.env.DEV) {
+    deployments.value = [
+      { id: 1, name: 'api-service', version: 'v1.2.3', status: 'success', created_at: new Date().toISOString() },
+      { id: 2, name: 'ui', version: 'v2.0.1', status: 'pending', created_at: new Date().toISOString() },
+      { id: 3, name: 'database', version: 'v1.0.5', status: 'success', created_at: new Date().toISOString() },
+    ];
+  } else {
+    deployments.value = [];
   }
 };
 
@@ -607,10 +398,16 @@ const formatTime = (dateStr: string | Date) => {
   }).format(date);
 };
 
-// 初始化
+// 初始化 - 合并两个版本的初始化逻辑
 onMounted(async () => {
+  // 新的初始化
   await refreshAll();
   startAutoRefresh();
+  
+  // 旧的初始化
+  fetchMetrics();
+  fetchLogs();
+  fetchDeployments();
 });
 
 // 清理
@@ -627,4 +424,178 @@ onUnmounted(() => {
 watch(() => document.documentElement.classList.contains('dark'), () => {
   updateChart();
 });
-</script> 
+</script>
+
+<template>
+  <div class="space-y-6">
+    <div class="flex justify-between items-center">
+      <h1 class="text-2xl font-bold">系统仪表板</h1>
+      <div class="flex gap-2">
+        <button 
+          @click="refreshAll" 
+          class="px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center gap-1"
+          :disabled="loading">
+          <span v-if="loading" class="animate-spin">⟳</span>
+          <span>刷新</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 系统状态概览 -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        <div class="flex justify-between">
+          <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">CPU 使用率</h3>
+          <div :class="getStatusClass(latestMetrics?.cpuUsage || 0, 80, 90)">
+            {{ getStatusLabel(latestMetrics?.cpuUsage || 0, 80, 90) }}
+          </div>
+        </div>
+        <div class="mt-2 flex items-end">
+          <span class="text-2xl font-bold">{{ latestMetrics?.cpuUsage?.toFixed(1) || '0.0' }}%</span>
+          <div class="ml-2 text-xs" :class="getCpuTrendClass()">
+            <span v-if="cpuTrend > 0">↑ {{ cpuTrend.toFixed(1) }}%</span>
+            <span v-else-if="cpuTrend < 0">↓ {{ Math.abs(cpuTrend).toFixed(1) }}%</span>
+            <span v-else>-</span>
+          </div>
+        </div>
+        <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div class="h-full rounded-full" 
+               :class="getUsageBarClass(latestMetrics?.cpuUsage || 0)"
+               :style="{ width: `${Math.min(latestMetrics?.cpuUsage || 0, 100)}%` }"></div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        <div class="flex justify-between">
+          <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">内存使用率</h3>
+          <div :class="getStatusClass(memoryUsagePercent, 75, 90)">
+            {{ getStatusLabel(memoryUsagePercent, 75, 90) }}
+          </div>
+        </div>
+        <div class="mt-2 flex items-end">
+          <span class="text-2xl font-bold">{{ memoryUsagePercent.toFixed(1) }}%</span>
+          <span class="ml-2 text-xs text-gray-500">{{ formatBytes(latestMetrics?.memoryUsed || 0) }} / {{ formatBytes(latestMetrics?.memoryTotal || 0) }}</span>
+        </div>
+        <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div class="h-full rounded-full" 
+               :class="getUsageBarClass(memoryUsagePercent)"
+               :style="{ width: `${memoryUsagePercent}%` }"></div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        <div class="flex justify-between">
+          <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">磁盘使用率</h3>
+          <div :class="getStatusClass(diskUsagePercent, 85, 95)">
+            {{ getStatusLabel(diskUsagePercent, 85, 95) }}
+          </div>
+        </div>
+        <div class="mt-2 flex items-end">
+          <span class="text-2xl font-bold">{{ diskUsagePercent.toFixed(1) }}%</span>
+          <span class="ml-2 text-xs text-gray-500">{{ formatBytes(latestMetrics?.diskUsed || 0) }} / {{ formatBytes(latestMetrics?.diskTotal || 0) }}</span>
+        </div>
+        <div class="mt-2 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div class="h-full rounded-full" 
+               :class="getUsageBarClass(diskUsagePercent)"
+               :style="{ width: `${diskUsagePercent}%` }"></div>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-gray-800 p-4 rounded-lg shadow">
+        <div class="flex justify-between">
+          <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">网络流量 (KB/s)</h3>
+          <div class="px-2 py-0.5 text-xs rounded-full bg-blue-100 text-blue-800">实时</div>
+        </div>
+        <div class="mt-2 flex items-end justify-between">
+          <div>
+            <div class="flex items-center text-sm">
+              <span class="w-3 h-3 rounded-full bg-green-500 mr-1"></span>
+              <span>入站: {{ (latestMetrics?.networkBytesIn || 0) / 1024 | 0 }}</span>
+            </div>
+            <div class="flex items-center text-sm mt-1">
+              <span class="w-3 h-3 rounded-full bg-blue-500 mr-1"></span>
+              <span>出站: {{ (latestMetrics?.networkBytesOut || 0) / 1024 | 0 }}</span>
+            </div>
+          </div>
+          <div class="text-xl font-bold">
+            {{ ((latestMetrics?.networkBytesIn || 0) + (latestMetrics?.networkBytesOut || 0)) / 1024 | 0 }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 告警和系统状态 -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <!-- 最新告警 -->
+      <div class="md:col-span-2 bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h2 class="text-lg font-semibold">最新告警</h2>
+          <router-link to="/alerts" class="text-blue-500 hover:text-blue-600 text-sm">查看全部 →</router-link>
+        </div>
+        <div class="p-4">
+          <div v-if="loadingAlerts" class="flex justify-center items-center h-32">
+            <div class="animate-spin h-6 w-6 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+          </div>
+          <div v-else-if="alerts.length === 0" class="text-center py-8 text-gray-500">
+            目前没有告警信息
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="alert in alerts.slice(0, 3)" :key="alert.id" 
+                 class="p-3 rounded-md" :class="getAlertBgClass(alert.severity)">
+              <div class="flex justify-between">
+                <div class="font-medium flex items-center">
+                  <span :class="getAlertIconClass(alert.severity)" class="mr-2">⚠</span>
+                  <span>{{ alert.source }} - {{ alert.metric }}</span>
+                </div>
+                <div class="text-xs text-gray-500">{{ formatTime(alert.timestamp) }}</div>
+              </div>
+              <div class="mt-1 text-sm">{{ alert.message }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 任务状态 -->
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+        <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+          <h2 class="text-lg font-semibold">计划任务状态</h2>
+          <router-link to="/schedules" class="text-blue-500 hover:text-blue-600 text-sm">管理 →</router-link>
+        </div>
+        <div class="p-4">
+          <div v-if="loadingTasks" class="flex justify-center items-center h-32">
+            <div class="animate-spin h-6 w-6 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+          </div>
+          <div v-else-if="tasks.length === 0" class="text-center py-8 text-gray-500">
+            没有计划任务
+          </div>
+          <div v-else class="space-y-3">
+            <div v-for="task in tasks" :key="task.id" class="border-b border-gray-200 dark:border-gray-700 last:border-b-0 pb-3 last:pb-0">
+              <div class="flex justify-between items-center">
+                <span class="font-medium">{{ task.name }}</span>
+                <span :class="task.isEnabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'" class="px-2 py-0.5 text-xs rounded-full">
+                  {{ task.isEnabled ? '已启用' : '已禁用' }}
+                </span>
+              </div>
+              <div class="text-xs text-gray-500 mt-1">
+                <div>Cron: {{ task.cronExpression }}</div>
+                <div>下次执行: {{ formatTime(task.nextRunTime) }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 系统资源使用历史 -->
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow">
+      <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+        <h2 class="text-lg font-semibold">系统资源使用历史</h2>
+      </div>
+      <div class="p-4">
+        <div class="h-80">
+          <canvas ref="systemHistoryChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</template> 
