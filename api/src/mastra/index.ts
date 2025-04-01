@@ -1,11 +1,8 @@
 import { Mastra } from '@mastra/core';
-import { Memory } from '@mastra/memory';
-// Removing problematic imports
-// import { MastraStorageLibSql } from '@mastra/core/storage';
 import path from 'path';
 import fs from 'fs';
 import { createQwen } from 'qwen-ai-provider';
-import { customEmbeddingProvider, vector } from '../services/embeddings';
+import { baseMemory } from './memory-config';
 
 // 正确初始化千问客户端
 const qwenClient = createQwen({
@@ -31,34 +28,12 @@ export const qw = async function(params) {
   }
 };
 
-// 使用内存存储替代LibSQL
-// const storage = new MastraStorageLibSql({
-//   config: {
-//     url: process.env.DATABASE_URL || 'file:mastra.db',
-//   },
-// });
+// 导出基础内存
+export { baseMemory as memory };
 
-// 初始化记忆系统 - 使用FastEmbed
-export const memory = new Memory({
-  vector, // 使用LibSQL向量数据库
-  embedding: {
-    provider: "custom",
-    custom: customEmbeddingProvider
-  },
-  options: {
-    lastMessages: 15,
-    semanticRecall: {
-      enabled: true, // 启用语义搜索
-      topK: 5, // 检索 top 5 相似消息
-      messageRange: 3, // 每个相关消息的上下文窗口
-    },
-    workingMemory: { enabled: true },
-  }
-});
-
-// 初始化基本的Mastra实例 - 集成记忆功能
+// 初始化基本的Mastra实例，使用基础内存
 export const mastra = new Mastra({
-  memory,
+  memory: baseMemory
 });
 
 // 初始化Mastra数据结构
@@ -70,7 +45,7 @@ export async function initializeMastraStorage() {
       fs.mkdirSync(dataDir, { recursive: true });
     }
     
-    console.log('Mastra存储系统初始化成功');
+    console.log('Mastra存储系统初始化成功（无语义搜索）');
     return true;
   } catch (error) {
     console.error('Mastra初始化失败:', error);

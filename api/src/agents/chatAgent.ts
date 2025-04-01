@@ -1,16 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
-import { qw, PROMPTS, PROMPT_TYPES, memory } from '../mastra';
+import { qw, PROMPTS, PROMPT_TYPES } from '../mastra';
+import { baseMemory } from '../mastra/memory-config';
 import { Agent } from '@mastra/core/agent';
 
-// 创建聊天代理
+// 创建聊天代理，使用基础内存
 export const chatAgent = new Agent({
   name: 'Chat Agent',
   instructions: PROMPTS[PROMPT_TYPES.OPS_ASSISTANT],
   model: qw,
-  memory,
+  memory: baseMemory,
 });
 
-console.log('聊天代理创建成功');
+console.log('聊天代理创建成功（使用基础内存，无语义搜索）');
 
 // 生成会话ID
 export function generateConversationId(): string {
@@ -25,24 +26,23 @@ export async function* sendChatMessage(message: string, conversationId?: string,
     console.log(`开始处理消息: "${message.slice(0, 50)}${message.length > 50 ? '...' : ''}"`);
     console.log(`会话ID: ${sessionId}`);
     
-    // 使用 Memory API 相关选项
+    // 强制禁用语义搜索，避免任何嵌入相关错误
     const memoryOptions = {
-      lastMessages: 10,            // 最近的10条消息
+      lastMessages: 15,            // 最近的15条消息
       semanticRecall: {
-        enabled: false,            // 禁用语义搜索，避免嵌入错误
-        // topK: 3,                // 检索 top 3 相似消息
-        // messageRange: 2,        // 每个匹配消息的上下文窗口
+        enabled: false,            // 强制禁用语义搜索
       },
       workingMemory: { enabled: true },
     };
+
+    console.log("语义搜索已禁用，仅使用最近的消息作为上下文");
     
     try {
       // 确保资源ID前缀与线程ID匹配
-      // 根据错误信息，线程ID为local-1743481693229时，资源ID应为user_local-1743481693229
-      // 所以我们使用一致的前缀格式，使用sessionId作为一部分
       const resourceId = `user_${sessionId}`;
       
       console.log(`使用资源ID: ${resourceId}`);
+      console.log('内存配置:', JSON.stringify(memoryOptions));
       
       // 使用 Agent 进行流式对话，并利用 Mastra 记忆系统
       const response = await chatAgent.stream(message, {
@@ -73,13 +73,15 @@ export async function* sendChatMessage(message: string, conversationId?: string,
       
     } catch (err) {
       console.error('AI处理错误:', err);
-      console.error('错误详情:', JSON.stringify(err, null, 2));
+      console.error('错误详情:', err instanceof Error ? err.message : JSON.stringify(err, null, 2));
       
       // 错误分析
       if (err instanceof Error) {
         console.error(`错误名称: ${err.name}`);
         console.error(`错误消息: ${err.message}`);
-        console.error(`错误堆栈: ${err.stack}`);
+        if (err.stack) {
+          console.error(`错误堆栈: ${err.stack}`);
+        }
       }
       
       const errorMessage = '抱歉，AI服务临时不可用，请稍后再试。';
@@ -93,7 +95,6 @@ export async function* sendChatMessage(message: string, conversationId?: string,
     
   } catch (error) {
     console.error('聊天消息处理错误:', error);
-    console.error('错误详情:', JSON.stringify(error, null, 2));
     
     const errorMessage = '抱歉，处理消息时出现错误。';
     
@@ -111,11 +112,11 @@ export async function getChatHistory(conversationId: string) {
     // 确保资源ID与sendChatMessage中保持一致
     const resourceId = `user_${conversationId}`;
     
-    // 使用 Mastra Memory API 获取历史消息
-    const history = await memory.getThreadMessages({
+    // 使用基础内存获取历史消息
+    const history = await baseMemory.getMessages({
       threadId: conversationId,
-      resourceId: resourceId, // 添加resourceId参数
-      limit: 50, // 最多返回50条消息
+      resourceId: resourceId,
+      limit: 50,
     });
     
     console.log(`获取历史记录, ID: ${conversationId}, 消息数: ${history.length}`);

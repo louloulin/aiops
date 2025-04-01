@@ -187,27 +187,59 @@ const PORT = process.env.PORT ? parseInt(process.env.PORT) : 3001;
 // 服务器初始化
 const startServer = async () => {
   try {
-    // 初始化Mastra存储
-    const mastraInitialized = await initializeMastraStorage();
-    if (!mastraInitialized) {
-      console.error('Mastra存储初始化失败，使用内存缓存作为备选方案');
+    // 创建数据目录
+    const dataDir = path.join(process.cwd(), 'data');
+    if (!fs.existsSync(dataDir)) {
+      fs.mkdirSync(dataDir, { recursive: true });
+      console.log('数据目录创建成功');
     }
     
-    // 运行数据库迁移（可选，生产环境可以禁用）
-    if (process.env.RUN_MIGRATIONS === 'true') {
-      await runMigrations();
+    // 初始化Redis - 如果失败使用内存缓存
+    try {
+      await initRedis();
+      console.log('Redis 初始化成功');
+    } catch (redisError) {
+      console.warn('Redis 初始化失败，将使用内存缓存:', redisError);
     }
     
     // 初始化数据服务
-    await initializeDataServices();
+    try {
+      await initializeDataServices();
+      console.log('数据服务初始化成功');
+    } catch (dbError) {
+      console.error('数据服务初始化失败:', dbError);
+    }
     
-    // 启动 HTTP 服务器
-    console.log(`服务器启动在 http://localhost:${PORT}`);
-    
-    serve({
+    // Mastra存储初始化延迟到HTTP服务器启动后，以避免阻塞启动
+    console.log('启动 HTTP 服务器...');
+    const server = serve({
       fetch: app.fetch,
       port: PORT
     });
+    
+    console.log(`服务器启动在 http://localhost:${PORT}`);
+    
+    // 服务器启动后，异步初始化Mastra存储
+    initializeMastraStorage().then(initialized => {
+      if (initialized) {
+        console.log('Mastra存储系统初始化成功，语义搜索可用');
+      } else {
+        console.warn('Mastra存储初始化失败，将使用基本内存');
+      }
+    }).catch(error => {
+      console.error('Mastra初始化过程中发生错误:', error);
+    });
+    
+    // 数据库迁移也在服务器启动后异步执行
+    if (process.env.RUN_MIGRATIONS === 'true') {
+      runMigrations().then(() => {
+        console.log('数据库迁移完成');
+      }).catch(migrationError => {
+        console.error('数据库迁移失败:', migrationError);
+      });
+    }
+    
+    return server;
   } catch (error) {
     console.error('服务器启动失败:', error);
     process.exit(1);
